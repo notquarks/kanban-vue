@@ -1,0 +1,10 @@
+<script setup lang="ts">
+// All your component logic goes here
+</script>
+
+<template>
+  <div>
+    <h1 class="text-4xl font-bold">Teams</h1>
+    <p class="mt-4 text-lg text-gray-600">Welcome to your Kanban dashboard.</p>
+  </div>
+</template>

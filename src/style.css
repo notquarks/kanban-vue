@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+    /* --- Base Palette --- */
+    --color-background: #fffdfc;
+    --color-surface: #f1f1f1;
+
+    /* --- Text Colors --- */
+    --color-text-primary: #1c1c1c;
+    --color-text-secondary: #8a8a8a;
+    --color-text-on-accent: theme(colors.white);
+
+    /* --- UI Elements --- */
+    --color-ui-strong: #1c1c1c;
+    --color-ui-subtle: #e0e0e0;
+
+    /* --- Project Card Colors --- */
+    --color-project-yellow: #f5eeda;
+    --color-project-blue: #e1f1f2;
+
+    /* --- Event/Schedule Colors --- */
+    --color-event-green: #e1efe6;
+    --color-event-purple: #e5e2f7;
+
+    /* --- Borders & Dividers --- */
+    --color-border: theme(colors.gray.200);
+
+    /* --- Accents & Interactive Colors --- */
+    --color-accent-purple-bg: #e9e7f7;
+    --color-accent-purple-sf: #b3a9e6;
+    --color-accent-orange: #ff7f50;
+
+	margin: 0;
+	padding: 0;
+}
+
+
+
+@theme {
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-on-accent: var(--color-text-on-accent);
+
+  --color-border: var(--color-border);
+
+  --color-accent-purple-bg: var(--color-accent-purple-bg);
+  --color-accent-purple-sf: var(--color-accent-purple-sf);
+  --color-accent-orange: var(--color-accent-orange);
+}
+
+
+
+
+/* --- Dark Theme --- */
+/*@media (prefers-color-scheme: dark) {
+  :root {
+
+    --color-background: #111015;
+    --color-surface: #1d1c23;
+
+
+    --color-text-primary: theme(colors.gray.50);
+    --color-text-secondary: theme(colors.gray.400);
+    --color-text-on-accent: theme(colors.gray.900);
+
+
+    --color-border: theme(colors.gray.700);
+
+
+    --color-accent-purple-bg: #3b315b;
+    --color-accent-purple-bar: #a899e6;
+    --color-accent-orange: #ff7f50;
+}*/
+
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: system-ui, -apple-system, "Inter", BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.kanban-nav-link > span{
+    transition: all 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.kanban-nav-link:hover > span{
+    cursor: pointer;
+    text-decoration: underline;
+}

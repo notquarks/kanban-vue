@@ -1,14 +1,9 @@
 <script setup lang="ts">
 import {
-  NavigationMenuContent,
-  NavigationMenuIndicator,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuRoot,
-  NavigationMenuSub,
-  NavigationMenuTrigger,
-  NavigationMenuViewport,
 } from "radix-vue";
 import { Kanban } from "lucide-vue-next";
 import { useRoute, RouterLink } from "vue-router";

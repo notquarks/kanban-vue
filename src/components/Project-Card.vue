@@ -3,9 +3,8 @@ import { defineProps } from "vue";
 
 interface Project {
   id: string;
-  title: string;
-  description?: string;
-  // Add other project properties as needed
+  name: string;
+  description?: string | null;
 }
 
 const props = defineProps<{
@@ -21,7 +20,7 @@ const props = defineProps<{
       class="mb-3 flex h-4/5 w-full rounded-md bg-gradient-to-br from-blue-500 to-blue-600"
     ></div>
     <div class="flex-1">
-      <h3 class="truncate font-semibold text-gray-900">{{ project.title }}</h3>
+      <h3 class="truncate font-semibold text-gray-900">{{ project.name }}</h3>
       <p class="mt-1 line-clamp-2 text-sm text-gray-600">
         {{ project.description || "No description available" }}
       </p>

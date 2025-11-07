@@ -8,7 +8,10 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 // Environment variables with fallbacks
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 const BCRYPT_ROUNDS = 12;
 

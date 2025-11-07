@@ -9,7 +9,7 @@ export async function apiRequest(url: string, options: RequestInit = {}, overrid
 
   let tokenToUse = overrideToken
   if (!tokenToUse && typeof window !== 'undefined') {
-    tokenToUse = localStorage.getItem('token')
+    tokenToUse = localStorage.getItem('token') as string
   }
 
 

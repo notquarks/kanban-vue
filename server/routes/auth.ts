@@ -10,6 +10,7 @@ import type {
   SafeUser,
   JWTPayload
 } from '../middleware/auth';
+import { rateLimit } from '../middleware/rateLimit';
 import {
   generateToken,
   hashPassword,
@@ -45,10 +46,15 @@ interface ErrorResponse {
   details?: unknown;
 }
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 6, // limit each IP to 5 requests per windowMs
+  message: 'Too many authentication attempts, please try again later'
+});
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
 
 authRoutes.post(
-  '/register',
+  '/register', authLimiter,
   validator('json', (value, c) => {
     const body = value as RegisterRequest;
 
@@ -138,7 +144,7 @@ authRoutes.post(
 );
 
 authRoutes.post(
-  '/login',
+  '/login', authLimiter,
   validator('json', (value, c) => {
     const body = value as LoginRequest;
 

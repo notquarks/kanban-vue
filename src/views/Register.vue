@@ -65,7 +65,7 @@ function register() {
             id="name"
             type="name"
             v-model="name"
-            class="border-b"
+            class="rounded-xs border-b border-gray-300 focus:border-b-2 focus:border-b-gray-900 focus:outline-none"
             required
           />
         </div>
@@ -75,7 +75,7 @@ function register() {
             id="email"
             type="email"
             v-model="email"
-            class="border-b"
+            class="rounded-xs border-b border-gray-300 focus:border-b-2 focus:border-b-gray-900 focus:outline-none"
             required
           />
         </div>
@@ -86,7 +86,7 @@ function register() {
               id="password"
               type="password"
               v-model="password"
-              class="flex-grow"
+              class="flex-grow rounded-xs border-b border-gray-300 focus:border-b-2 focus:border-b-gray-900 focus:outline-none"
               minlength="8"
               autocomplete="current-password"
               required

@@ -1,16 +1,18 @@
 {
-  "linter": {
-    "rules": {
-      "suspicious": {
-        "noUnknownAtRules": {
-          "options": {
-            "ignore": [
-              "custom-at-rule",
-              "my-custom-rule"
-            ]
-          }
-        }
-      }
-    }
-  }
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"linter": {
+		"rules": {
+			"suspicious": {
+				"noUnknownAtRules": {
+					"options": {
+						"ignore": ["custom-at-rule", "my-custom-rule"]
+					}
+				}
+			}
+		}
+	}
 }

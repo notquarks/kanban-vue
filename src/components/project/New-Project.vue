@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useAuthStore } from "@/stores/auth";
-import { useProjectsStore } from "@/stores/projects";
 import { PlusIcon } from "lucide-vue-next";
 import { ref } from "vue";
+import { useAuthStore } from "@/stores/auth";
+import { useProjectsStore } from "@/stores/projects";
 import ModalNewProject from "./Modal-Project.vue";
 
 const projectStore = useProjectsStore();

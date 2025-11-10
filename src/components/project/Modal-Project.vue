@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Project } from "@/stores/projects";
 import { computed, defineEmits, defineProps, ref, watch } from "vue";
+import type { Project } from "@/stores/projects";
 
 const props = defineProps<{
   open: boolean;
@@ -108,13 +108,13 @@ function handleClose() {
           <button
             @click="handleSubmit"
             :disabled="isLoading || !name.trim()"
-            class="focus:ring-offset-0.5 flex-1 rounded-xs bg-black px-3 py-2 text-white transition-colors hover:cursor-pointer hover:bg-gray-700 focus:ring-2 focus:ring-gray-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex-1 rounded-sm bg-black px-3 py-2 text-white transition-colors hover:cursor-pointer hover:bg-gray-700 focus:ring-2 focus:ring-gray-300 focus:ring-offset-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             {{ submitButtonText }}
           </button>
           <button
             @click="handleClose"
-            class="rounded-xs border border-gray-300 px-3 py-2 text-gray-700 transition-colors hover:cursor-pointer hover:bg-red-800 hover:text-white focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none"
+            class="rounded-sm border border-gray-300 px-3 py-2 text-gray-700 transition-colors hover:cursor-pointer hover:bg-red-800 hover:text-white focus:ring-2 focus:ring-gray-500 focus:ring-offset-0 focus:outline-none"
           >
             Cancel
           </button>

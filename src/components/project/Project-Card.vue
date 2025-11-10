@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { useAuthStore } from "@/stores/auth";
-import { type Project, useProjectsStore } from "@/stores/projects";
 import { EllipsisVertical } from "lucide-vue-next";
 import {
   AlertDialogAction,
@@ -19,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "radix-vue";
 import { defineProps, ref } from "vue";
+import { useAuthStore } from "@/stores/auth";
+import { type Project, useProjectsStore } from "@/stores/projects";
 import ModalNewProject from "./Modal-Project.vue";
 
 const projectStore = useProjectsStore();
@@ -83,7 +83,7 @@ async function handleDeleteProject(projectId: string) {
         </DropdownMenuTrigger>
         <DropdownMenuPortal>
           <DropdownMenuContent
-            class="data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade min-w-[140px] rounded-md border bg-white will-change-[opacity,transform] outline-none"
+            class="data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade min-w-[140px] rounded-sm border bg-white will-change-[opacity,transform] outline-none"
             :avoidCollisions="false"
             :side-offset="2"
           >

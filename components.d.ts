@@ -12,10 +12,10 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ModalNewProject: typeof import('./src/components/Modal-NewProject.vue')['default']
-    ModalProject: typeof import('./src/components/Modal-Project.vue')['default']
+    ModalProject: typeof import('./src/components/project/Modal-Project.vue')['default']
     NavBar: typeof import('./src/components/NavBar.vue')['default']
-    NewProject: typeof import('./src/components/New-Project.vue')['default']
-    ProjectCard: typeof import('./src/components/Project-Card.vue')['default']
+    NewProject: typeof import('./src/components/project/New-Project.vue')['default']
+    ProjectCard: typeof import('./src/components/project/Project-Card.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

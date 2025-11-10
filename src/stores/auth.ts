@@ -82,6 +82,36 @@ export const useAuthStore = defineStore("auth", () => {
       throw error instanceof Error ? error : new Error("Logout failed");
     }
   }
+
+  async function checkAuth(): Promise<boolean> {
+    if (!token.value) {
+      return false;
+    }
+
+    try {
+      // Verify token with server
+      const response = await api.get("/auth/me");
+
+      if (response.user) {
+        user.value = response.user;
+        isAuthenticated.value = true;
+        localStorage.setItem("user", JSON.stringify(response.user));
+        return true;
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+    }
+
+    // If we reach here, auth is invalid
+    token.value = null;
+    user.value = null;
+    isAuthenticated.value = false;
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    return false;
+  }
+
+
   return {
     user,
     token,
@@ -89,5 +119,6 @@ export const useAuthStore = defineStore("auth", () => {
     register,
     login,
     logout,
+    checkAuth,
   };
 });

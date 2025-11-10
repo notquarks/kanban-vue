@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { CircleX, SquareDashedKanban } from "lucide-vue-next";
 import { onMounted } from "vue";
-import NewProject from "../components/New-Project.vue";
-import ProjectCard from "../components/Project-Card.vue";
-import { useAuthStore } from "../stores/auth";
-import { useProjectsStore } from "../stores/projects";
+import NewProject from "@/components/project/New-Project.vue";
+import ProjectCard from "@/components/project/Project-Card.vue";
+import { useAuthStore } from "@/stores/auth";
+import { useProjectsStore } from "@/stores/projects";
 
 const projectStore = useProjectsStore();
 const authStore = useAuthStore();

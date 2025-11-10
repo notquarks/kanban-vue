@@ -2,6 +2,14 @@
 import { useRoute } from "vue-router";
 
 const route = useRoute();
+
+definePage({
+  meta: {
+    requiresAuth: true,
+    title: 'Project'
+  }
+})
+
 </script>
 
 <template>

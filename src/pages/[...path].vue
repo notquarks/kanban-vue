@@ -10,10 +10,7 @@ import { RouterLink } from "vue-router";
       Sorry, the page you are looking for does not exist.
     </p>
     <div class="mt-8">
-      <RouterLink
-        to="/"
-        class="rounded-md bg-blue-600 px-5 py-3 text-white transition hover:bg-blue-700"
-      >
+      <RouterLink to="/" class="rounded-md bg-blue-600 px-5 py-3 text-white transition hover:bg-blue-700">
         Go back to Dashboard
       </RouterLink>
     </div>

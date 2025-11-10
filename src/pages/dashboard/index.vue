@@ -9,11 +9,18 @@ import { useProjectsStore } from "@/stores/projects";
 const projectStore = useProjectsStore();
 const authStore = useAuthStore();
 
+definePage({
+  meta: {
+    requiresAuth: true,
+    title: 'Dashboard'
+  }
+})
+
 onMounted(async () => {
   if (authStore.isAuthenticated) {
     projectStore
       .fetchProjects()
-      .catch((_error) => {})
+      .catch((_error) => { })
       .finally(() => {
         console.log(projectStore.projects);
       });
@@ -44,17 +51,11 @@ async function handleProjectCreated(projectData: {
       Welcome to your Kanban dashboard.
     </p>
 
-    <div
-      v-if="projectStore.loading"
-      class="flex min-h-[50vh] items-center justify-center text-center"
-    >
+    <div v-if="projectStore.loading" class="flex min-h-[50vh] items-center justify-center text-center">
       <div class="h-12 w-12 animate-spin border-4 border-gray-800" />
     </div>
 
-    <div
-      v-else-if="projectStore.error"
-      class="mb-6 rounded-md border border-red-200 bg-red-50 p-4"
-    >
+    <div v-else-if="projectStore.error" class="mb-6 rounded-md border border-red-200 bg-red-50 p-4">
       <div class="flex items-center">
         <div class="flex-shrink-0">
           <CircleX class="h-5 w-5 text-red-700" />
@@ -76,10 +77,7 @@ async function handleProjectCreated(projectData: {
         <NewProject @project-created="handleProjectCreated" />
       </div>
 
-      <div
-        v-if="projectStore.projects.length === 0"
-        class="flex min-h-[50vh] items-center justify-center text-center"
-      >
+      <div v-if="projectStore.projects.length === 0" class="flex min-h-[50vh] items-center justify-center text-center">
         <div class="flex flex-col">
           <SquareDashedKanban class="mx-auto h-14 w-14" />
           <h3 class="mt-2 text-sm font-medium text-gray-900">
@@ -91,15 +89,8 @@ async function handleProjectCreated(projectData: {
         </div>
       </div>
 
-      <div
-        v-else
-        class="mt-4 grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2"
-      >
-        <ProjectCard
-          v-for="project in projectStore.projects"
-          :key="project.id"
-          :project="project"
-        />
+      <div v-else class="mt-4 grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">
+        <ProjectCard v-for="project in projectStore.projects" :key="project.id" :project="project" />
       </div>
     </div>
   </div>

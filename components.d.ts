@@ -11,6 +11,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    KanbanCard: typeof import('./src/components/kanban/Kanban-Card.vue')['default']
+    KanbanList: typeof import('./src/components/kanban/Kanban-List.vue')['default']
     ModalNewProject: typeof import('./src/components/Modal-NewProject.vue')['default']
     ModalProject: typeof import('./src/components/project/Modal-Project.vue')['default']
     NavBar: typeof import('./src/components/NavBar.vue')['default']

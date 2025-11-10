@@ -21,8 +21,8 @@ router.beforeEach(async (to, from, next) => {
 	const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
 
 	if (!requiresAuth) {
-		if ((to.name === "login" || to.name === "register") && authStore.isAuthenticated) {
-			next({ name: "dashboard" });
+		if ((to.name === "/login/" || to.name === "/register/") && authStore.isAuthenticated) {
+			next({ name: "/dashboard/" });
 			return;
 		}
 		next();
@@ -46,7 +46,7 @@ router.beforeEach(async (to, from, next) => {
 		} else if (!storedToken) {
 			console.log("Router guard: No token found, redirecting to login");
 		}
-		next({ name: "login", query: { redirect: to.fullPath } });
+		next({ name: "/login/", query: { redirect: to.fullPath } });
 		return;
 	}
 	next();

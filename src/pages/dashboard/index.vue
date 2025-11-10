@@ -18,7 +18,7 @@ definePage({
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {
-    projectStore
+    await projectStore
       .fetchProjects()
       .catch((_error) => { })
       .finally(() => {

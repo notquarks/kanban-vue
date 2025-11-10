@@ -114,9 +114,10 @@ export const useProjectsStore = defineStore("projects", () => {
 	};
 
 	// Helper functions
-	const getProjectById = (id: string): Project | undefined => {
-		return projects.value.find((p: Project) => p.id === id);
-	};
+    const getProjectById = (id: string): Project | undefined => {
+        const found = projects.value.find((p: Project) => p.id === id);
+        return found;
+    };
 
 	const getProjectsByOwner = (ownerId: string): Project[] => {
 		return projects.value.filter((p: Project) => p.ownerId === ownerId);

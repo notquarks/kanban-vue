@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import navbar from "./components/navbar.vue";
+import NavBar from "@/components/NavBar.vue";
 import { RouterView } from "vue-router";
-import { useAuthStore } from "./stores/auth";
+import { useAuthStore } from "@/stores/auth";
 import { onMounted } from "vue";
 
 const authStore = useAuthStore();
 
 onMounted(async () => {
-  
+
   if (!authStore.isAuthenticated && authStore.token) {
     try {
       await authStore.checkAuth();
-    } catch (error) {}
+    } catch (error) { }
   }
 });
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen max-w-dvw w-full bg-gray-50">
     <header class="sticky top-0 z-50 w-full border-b bg-white">
-      <navbar v-if="authStore.isAuthenticated" />
+      <NavBar v-if="authStore.isAuthenticated" />
     </header>
 
-    <main class="container mx-auto px-4 py-8">
+    <main class="flex mx-28 w-full px-4 py-8">
       <RouterView />
     </main>
   </div>

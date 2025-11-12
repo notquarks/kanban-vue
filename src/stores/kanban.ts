@@ -121,22 +121,23 @@ export const useKanbanStore = defineStore("kanban", () => {
   const error = ref<string | null>(null);
 
   // Boards
-  const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
-    loading.value = true;
-    error.value = null;
+const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
+  loading.value = true;
+  error.value = null;
 
-    try {
-      const url = projectId ? `/boards?projectId=${projectId}` : "/boards";
-      const data = await api.get(url);
-      boards.value = data;
-      return data;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : "Unable to fetch boards";
-      throw err;
-    } finally {
-      loading.value = false;
-    }
-  };
+  try {
+    const url = projectId ? `/boards?projectId=${projectId}` : "/boards";
+    const response = await api.get(url);
+    const data = response.boards || response;
+    boards.value = data;
+    return data;
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "Unable to fetch boards";
+    throw err;
+  } finally {
+    loading.value = false;
+  }
+};
 
   const createBoard = async (boardData: CreateBoardData): Promise<KanbanBoard> => {
     loading.value = true;
@@ -190,13 +191,20 @@ export const useKanbanStore = defineStore("kanban", () => {
 
   // Columns
   const fetchColumns = async (boardId?: string): Promise<KanbanColumn[]> => {
-    loading.value = true;
-    error.value = null;
+  loading.value = true;
+  error.value = null;
 
-    try {
-      const url = boardId ? `/columns?boardId=${boardId}` : "/columns";
-      const data = await api.get(url);
+  try {
+    const url = boardId ? `/columns?boardId=${boardId}` : "/columns";
+    const response = await api.get(url);
+    const data = response.columns || response;  // Handle both response formats
+    
+    if (boardId) {
+      const existingColumns = columns.value.filter(col => col.boardId !== boardId);
+      columns.value = [...existingColumns, ...data];
+    } else {
       columns.value = data;
+    }
       return data;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Unable to fetch columns";
@@ -205,6 +213,7 @@ export const useKanbanStore = defineStore("kanban", () => {
       loading.value = false;
     }
   };
+
 
   const createColumn = async (columnData: CreateColumnData): Promise<KanbanColumn> => {
     loading.value = true;
@@ -263,7 +272,8 @@ export const useKanbanStore = defineStore("kanban", () => {
 
     try {
       const url = columnId ? `/cards?columnId=${columnId}` : "/cards";
-      const data = await api.get(url);
+      const response = await api.get(url);
+      const data = response.cards || response;  // Handle both response formats
       cards.value = data;
       return data;
     } catch (err) {
@@ -273,6 +283,7 @@ export const useKanbanStore = defineStore("kanban", () => {
       loading.value = false;
     }
   };
+
 
   const createCard = async (cardData: CreateCardData): Promise<KanbanCard> => {
     loading.value = true;
@@ -380,7 +391,7 @@ export const useKanbanStore = defineStore("kanban", () => {
     return cards.value.find((c: KanbanCard) => c.id === id);
   };
 
-  const getCardsByColumn = (columnId: string): KanbanCard[] => {
+  const getCardsByColumnId = (columnId: string): KanbanCard[] => {
     return cards.value
       .filter((c: KanbanCard) => c.columnId === columnId)
       .sort((a, b) => a.order - b.order);
@@ -456,7 +467,7 @@ export const useKanbanStore = defineStore("kanban", () => {
     getBoardById,
     getColumnById,
     getCardById,
-    getCardsByColumn,
+    getCardsByColumnId,
     getPriorityById,
     getLabelById,
 

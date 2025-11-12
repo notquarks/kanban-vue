@@ -69,7 +69,7 @@ async function handleProjectCreated(projectData: {
       </div>
     </div>
 
-    <div v-else class="flex h-full w-full flex-col">
+    <div v-else class="flex container-main-layout mx-28 h-full w-full flex-col">
       <div class="flex items-center justify-between">
         <h2 class="text-2xl font-semibold text-gray-900">
           Your Projects ({{ projectStore.projects.length }})

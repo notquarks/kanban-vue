@@ -45,7 +45,7 @@ async function handleProjectCreated(projectData: {
 </script>
 
 <template>
-  <div class="container">
+  <div class="container-main-layout mx-28 py-4">
     <h1 class="text-4xl font-bold">Dashboard</h1>
     <p class="my-4 mt-2 text-lg text-gray-600">
       Welcome to your Kanban dashboard.

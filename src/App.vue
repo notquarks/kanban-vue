@@ -17,12 +17,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen max-w-dvw w-full bg-gray-50">
+  <div class="max-w-dvw h-full flex flex-col w-full bg-gray-50">
     <header class="sticky top-0 z-50 w-full border-b bg-white">
       <NavBar v-if="authStore.isAuthenticated" />
     </header>
-
-    <main class="flex mx-28 w-full px-4 py-8">
+    <main class="flex w-full py-2 h-full flex-grow">
       <RouterView />
     </main>
   </div>

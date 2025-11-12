@@ -80,8 +80,8 @@ watch([() => route.path, () => projectId.value], async () => {
             class="group hover:bg-accent kanban-nav-link flex items-center space-x-2 rounded-md p-2 transition-colors">
             <ArrowLeft />
           </RouterLink>
-          <span class="font-semibold">{{ project?.name || 'Project' }}</span>
-          <span class="font-semibold"> &nbsp;Board</span>
+          <span class="font-semibold text-lg ml-4">{{ project?.name || 'Project' }}</span>
+          <span class="font-semibold text-lg"> &nbsp;Board</span>
         </NavigationMenuLink>
       </NavigationMenuItem>
     </NavigationMenuList>

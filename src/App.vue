@@ -21,7 +21,7 @@ onMounted(async () => {
     <header class="sticky top-0 z-50 w-full border-b bg-white">
       <NavBar v-if="authStore.isAuthenticated" />
     </header>
-    <main class="flex w-full py-2 h-full flex-grow">
+    <main class="flex w-full h-full flex-grow">
       <RouterView />
     </main>
   </div>

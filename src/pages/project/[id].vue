@@ -148,7 +148,7 @@ onMounted(async () => {
 <template>
   <div class="flex flex-col w-full h-full grow">
     <TabsRoot class="flex flex-col w-full justify-center h-full grow" v-model="activeTab">
-      <TabsList class="relative shrink-0 flex border-b pl-4 border-gray-500 gap-2">
+      <TabsList class="relative shrink-0 flex border-b pl-4 pt-2 border-gray-500 gap-2">
         <TabsTrigger v-for="(board, index) in boards" :key="`board-${board.id}`" :value="`tab${index}`"
           class="px-1 pl-3 py-1 hover:cursor-pointer bg-gray-500 text-white data-[state=active]:bg-gray-700 data-[state=active]:font-semibold flex flex-row cardColumns-center justify-between gap-2 rounded-t-sm">
           <span>{{ board.name }}</span>

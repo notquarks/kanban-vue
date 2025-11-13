@@ -4,7 +4,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuRoot,
-} from "radix-vue";
+} from "reka-ui";
 import { ArrowLeft, Kanban } from "lucide-vue-next";
 import { useRoute, RouterLink } from "vue-router";
 import { computed, onMounted, watch } from "vue";

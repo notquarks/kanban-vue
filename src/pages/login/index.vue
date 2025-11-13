@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Label } from "radix-vue";
+import { Label } from "reka-ui";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../../stores/auth";
 import { Eye, EyeOff } from "lucide-vue-next";

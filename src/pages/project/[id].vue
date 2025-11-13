@@ -26,7 +26,7 @@ import {
   AlertDialogDescription,
   AlertDialogCancel,
   AlertDialogAction
-} from "radix-vue";
+} from "reka-ui";
 import { computed, onMounted, ref, type Ref } from "vue";
 import { useRoute } from "vue-router";
 
@@ -80,7 +80,7 @@ async function deleteBoard(boardId: string) {
     await getBoards(projectId);
 
     if (boards.value.length > 0) {
-      activeTab.value = `tab${boards.value.length}`;
+      activeTab.value = `tab${boards.value.length - 1}`;
     } else {
       activeTab.value = 'add-tab';
     }
@@ -217,7 +217,7 @@ onMounted(async () => {
                   <label for="basic-template" class="text-sm font-medium">
                     Use Basic Template
                   </label>
-                  <SwitchRoot id="basic-template" v-model:checked="isTemplate"
+                  <SwitchRoot id="basic-template" v-model="isTemplate"
                     class="w-[42px] h-[20px] focus-within:outline focus-within:outline-black flex bg-black/50 shadow-sm rounded-full relative data-[state=checked]:bg-black cursor-default">
                     <SwitchThumb
                       class="block w-[20px] h-[20px] my-auto bg-white shadow-sm rounded-full transition-transform duration-100 translate-x-0.5 will-change-transform data-[state=checked]:translate-x-[20px]" />
@@ -244,7 +244,8 @@ onMounted(async () => {
       </TabsList>
 
       <TabsContent v-for="(board, index) in boards" :key="`content-${board.id}`"
-        class="grow h-full bg-white rounded-b-md outline-none w-full flex flex-col" :value="`tab${index}`">
+        class="grow h-full bg-white rounded-b-md outline-none w-full flex flex-col" :value="`tab${index}`" force-mount
+        :hidden="activeTab !== `tab${index}`">
         <div class="flex flex-col space-y-4 p-6 flex-grow overflow-x-scroll">
           <div class="flex flex-row space-x-4 items-center w-full">
             <button class="underline hover:cursor-pointer">Labels</button>
@@ -279,7 +280,8 @@ onMounted(async () => {
         </div>
       </TabsContent>
 
-      <TabsContent value="add-tab" class="grow p-5 bg-white rounded-b-md outline-none w-full h-full">
+      <TabsContent value="add-tab" class="grow p-5 bg-white rounded-b-md outline-none w-full h-full" force-mount
+        :hidden="activeTab !== 'add-tab'">
         <p>Nothing here</p>
       </TabsContent>
     </TabsRoot>

@@ -273,8 +273,13 @@ const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
     try {
       const url = columnId ? `/cards?columnId=${columnId}` : "/cards";
       const response = await api.get(url);
-      const data = response.cards || response;  // Handle both response formats
-      cards.value = data;
+      const data = response.cards || response;
+      if (columnId) {
+        const otherCards = cards.value.filter(card => card.columnId !== columnId);
+        cards.value = [...otherCards, ...data];
+      } else {
+        cards.value = data;
+      }
       return data;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Unable to fetch cards";

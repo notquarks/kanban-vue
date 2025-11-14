@@ -34,6 +34,7 @@ const isLoadingCards = ref(false);
 const cardsInColumn = ref<KanbanCard[]>([]);
 const isDragging = ref(false);
 
+// Drag handlers
 const onDragStart = () => {
     console.log('Drag started');
     isDragging.value = true;
@@ -68,6 +69,7 @@ const onChange = async (event: any) => {
                 oldIndex: event.added.oldIndex
             });
 
+            // Refetch both columns
             await Promise.all([
                 kanbanStore.fetchCards(fromColumnId),
                 kanbanStore.fetchCards(props.listId)

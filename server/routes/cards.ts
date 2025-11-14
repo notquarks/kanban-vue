@@ -345,8 +345,8 @@ cardsRoutes.patch(
       return c.json({ error: 'Column ID is required' }, 400);
     }
     
-    if (typeof body.order !== 'number') {
-      return c.json({ error: 'Order must be a number' }, 400);
+    if (typeof body.order !== 'number' || body.order < 0) {
+      return c.json({ error: 'Order must be a non-negative number' }, 400);
     }
     
     return body;
@@ -355,6 +355,10 @@ cardsRoutes.patch(
     try {
       const id = c.req.param('id');
       const { columnId, order: newOrder } = c.req.valid('json') as { columnId: string; order: number };
+      
+      console.log(`Moving card ${id} to column ${columnId} at order ${newOrder}`);
+      
+      // Get the card being moved
       const [existingCard] = await db
         .select()
         .from(kanbanCardsTable)
@@ -364,41 +368,73 @@ cardsRoutes.patch(
       if (!existingCard) {
         throw new AuthException('Card not found', 404);
       }
-
+      
       const oldColumnId = existingCard.columnId;
       const oldOrder = existingCard.order;
+      
+      console.log(`Card current state - columnId: ${oldColumnId}, order: ${oldOrder}`);
+      
+      // Start a transaction to ensure data consistency
       await db.transaction(async (tx) => {
+        // Case 1: Moving within the same column
         if (oldColumnId === columnId) {
+          console.log('Moving within same column');
+          
           if (oldOrder === newOrder) {
+            console.log('No change in order');
             return;
           }
-
+          
+          // Get all cards in the column sorted by order
           const cardsInColumn = await tx
             .select()
             .from(kanbanCardsTable)
             .where(eq(kanbanCardsTable.columnId, columnId))
             .orderBy(kanbanCardsTable.order);
           
+          console.log(`Found ${cardsInColumn.length} cards in column`);
+          
+          // Remove the moved card from the array
           const otherCards = cardsInColumn.filter(c => c.id !== id);
+          
+          // Insert the moved card at the new position
           otherCards.splice(newOrder, 0, existingCard);
-
+          
+          // Update all cards with new order values
           for (let i = 0; i < otherCards.length; i++) {
             await tx
               .update(kanbanCardsTable)
               .set({ order: i })
               .where(eq(kanbanCardsTable.id, otherCards[i].id));
           }
-        }
+          
+          console.log('Reordered cards in same column');
+        } 
+        // Case 2: Moving to a different column
         else {
+          console.log(`Moving from column ${oldColumnId} to ${columnId}`);
+          
+          // First, move the card to the new column
+          await tx
+            .update(kanbanCardsTable)
+            .set({ 
+              columnId: columnId,
+              order: newOrder
+            })
+            .where(eq(kanbanCardsTable.id, id));
+          
+          console.log('Updated card columnId');
+          
+          // Get all cards in the OLD column (excluding the moved card)
           const cardsInOldColumn = await tx
             .select()
             .from(kanbanCardsTable)
-            .where(and(
-              eq(kanbanCardsTable.columnId, oldColumnId),
-              ne(kanbanCardsTable.id, id)
-            ))
+            .where(eq(kanbanCardsTable.columnId, oldColumnId))
             .orderBy(kanbanCardsTable.order);
-
+          
+          console.log(`Found ${cardsInOldColumn.length} cards remaining in old column`);
+          
+          // Reorder cards in the old column
           for (let i = 0; i < cardsInOldColumn.length; i++) {
             await tx
               .update(kanbanCardsTable)
@@ -406,29 +442,28 @@ cardsRoutes.patch(
               .where(eq(kanbanCardsTable.id, cardsInOldColumn[i].id));
           }
           
+          // Get all cards in the NEW column
           const cardsInNewColumn = await tx
             .select()
             .from(kanbanCardsTable)
             .where(eq(kanbanCardsTable.columnId, columnId))
             .orderBy(kanbanCardsTable.order);
-          cardsInNewColumn.splice(newOrder, 0, { 
-            ...existingCard, 
-            columnId, 
-            order: newOrder 
-          });
           
+          console.log(`Found ${cardsInNewColumn.length} cards in new column`);
+          
+          // Reorder cards in the new column
           for (let i = 0; i < cardsInNewColumn.length; i++) {
             await tx
               .update(kanbanCardsTable)
-              .set({ 
-                order: i,
-                columnId: cardsInNewColumn[i].columnId 
-              })
+              .set({ order: i })
               .where(eq(kanbanCardsTable.id, cardsInNewColumn[i].id));
           }
+          
+          console.log('Reordered cards in both columns');
         }
       });
-    
+      
+      // Fetch the updated card to return
       const [updatedCard] = await db
         .select({
           ...getTableColumns(kanbanCardsTable),
@@ -463,10 +498,15 @@ cardsRoutes.patch(
           updatedAt: updatedCard.assignee.createdAt
         }) : undefined,
       };
+      
+      console.log('Move completed successfully');
       return c.json({ card: safeCard });
     } catch (error) {
       console.error('Move card error:', error);
-      throw new AuthException('Failed to move card', 500);
+      if (error instanceof AuthException) {
+        throw error;
+      }
+      throw new AuthException('Failed to move card: ' + (error instanceof Error ? error.message : 'Unknown error'), 500);
     }
   }
 );

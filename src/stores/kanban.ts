@@ -271,23 +271,26 @@ const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
     error.value = null;
 
     try {
-      const url = columnId ? `/cards?columnId=${columnId}` : "/cards";
-      const response = await api.get(url);
-      const data = response.cards || response;
-      if (columnId) {
-        const otherCards = cards.value.filter(card => card.columnId !== columnId);
-        cards.value = [...otherCards, ...data];
-      } else {
-        cards.value = data;
-      }
-      return data;
+        const url = columnId ? `/cards?columnId=${columnId}` : "/cards";
+        const response = await api.get(url);
+        const data = response.cards || response;
+        
+        if (columnId) {
+            const otherCards = cards.value.filter((c: KanbanCard) => c.columnId !== columnId);
+            cards.value = [...otherCards, ...data];
+        } else {
+            cards.value = data;
+        }
+
+        return data;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Unable to fetch cards";
-      throw err;
+        error.value = err instanceof Error ? err.message : "Unable to fetch cards";
+        throw err;
     } finally {
-      loading.value = false;
+        loading.value = false;
     }
   };
+
 
 
   const createCard = async (cardData: CreateCardData): Promise<KanbanCard> => {
@@ -340,18 +343,27 @@ const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
     }
   };
 
-  // Drag and drop functionality
   const moveCard = async (cardId: string, newColumnId: string, newOrder: number): Promise<KanbanCard> => {
     loading.value = true;
     error.value = null;
 
     try {
-      const data = await api.patch(`/cards/${cardId}/move`, { columnId: newColumnId, order: newOrder });
+      const response = await api.patch(`/cards/${cardId}/move`, { 
+        columnId: newColumnId, 
+        order: newOrder 
+      });
+      const updatedCard = response.card || response;
       const index = cards.value.findIndex((c: KanbanCard) => c.id === cardId);
       if (index !== -1) {
-        cards.value[index] = data;
+        cards.value[index] = {
+          ...cards.value[index],
+          ...updatedCard,
+          columnId: newColumnId,
+          order: newOrder
+        };
       }
-      return data;
+      
+      return updatedCard;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Unable to move card";
       throw err;
@@ -359,6 +371,7 @@ const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
       loading.value = false;
     }
   };
+
 
   // Priorities and Labels
   const fetchPriorities = async (): Promise<Priority[]> => {

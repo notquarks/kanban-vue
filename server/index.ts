@@ -38,7 +38,7 @@ const app = new Hono<{ Variables: AuthVariables }>();
 app.use('*', logger()); // Request logging
 app.use('*', cors({
   origin: ['http://localhost:5173', 'http://localhost:3000'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));

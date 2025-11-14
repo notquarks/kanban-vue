@@ -49,6 +49,38 @@ const boardToDelete = ref<string | null>(null);
 const activeTab = ref('add-tab');
 const inputColumn = ref<boolean>(false);
 const columnInput = ref<string>('');
+const isDraggingCard = ref(false);
+const showUndoButton = ref(false);
+
+const dragOperation = ref<{
+  cardId: string;
+  fromColumnId: string;
+  toColumnId: string;
+} | null>(null);
+
+const moveHistory = ref<Array<{
+  cardId: string;
+  fromColumnId: string;
+  toColumnId: string;
+  newIndex: number;
+  oldIndex: number;
+  timestamp: number;
+  userId?: string;
+}>>([]);
+
+const notifications = ref<Array<{
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title: string;
+  description: string;
+}>>([]);
+
+const columnMetrics = ref<Record<string, {
+  cardCount: number;
+  avgTimeInColumn: number;
+  movesIn: number;
+  movesOut: number;
+}>>({});
 
 async function getBoards(projectId: string) {
   boards.value = await kanbanStore.fetchBoards(projectId);
@@ -101,7 +133,6 @@ const getColumnsForBoard = (boardId: string) => {
   return kanbanStore.columns.filter(col => col.boardId === boardId);
 };
 
-
 const insertColumn = () => {
   inputColumn.value = true;
 };
@@ -114,7 +145,6 @@ const addColumn = async (boardId: string, name: string) => {
         name: name,
         order: (kanbanStore.columns?.length || 0) + 1
       });
-      // Fetch columns again to update UI immediately
       await getColumns(boardId);
     } catch (err) {
       console.error('Failed to create column:', err);
@@ -142,6 +172,23 @@ onMounted(async () => {
     await getColumns(firstBoardId);
   }
 });
+
+const handleCardMoved = async (event: {
+  cardId: string;
+  fromColumnId: string;
+  toColumnId: string;
+  newIndex: number;
+  oldIndex: number;
+}) => {
+  console.log('Card moved:', event);
+  const card = kanbanStore.getCardById(event.cardId);
+  const targetColumn = kanbanStore.getColumnById(event.toColumnId);
+
+  if (card?.status === 'done' && targetColumn?.name.toLowerCase() === 'todo') {
+    console.log('Cannot move completed cards back to To Do');
+    return;
+  }
+};
 
 </script>
 
@@ -252,7 +299,8 @@ onMounted(async () => {
           </div>
           <div class="flex flex-row w-full min-w-dvw space-x-4">
             <KanbanList :v-if="cardColumn" v-for="cardColumn in getColumnsForBoard(board.id)" :key="cardColumn.id"
-              :listId="cardColumn.id" :boardId="board.id" :projectId="projectId" :isLoading="false" />
+              @card-moved="handleCardMoved" :listId="cardColumn.id" :boardId="board.id" :projectId="projectId"
+              :isLoading="false" />
             <div class="border border-gray-400 w-2xs h-fit rounded-sm transition-all duration-100 ease-in">
               <button @click="insertColumn" v-if="!inputColumn"
                 class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-3 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">

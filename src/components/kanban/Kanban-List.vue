@@ -2,7 +2,8 @@
 import { useKanbanStore, type KanbanCard, type KanbanColumn } from '@/stores/kanban';
 import { useAuthStore } from '@/stores/auth';
 import { Pencil } from 'lucide-vue-next';
-import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogTrigger, Label, ScrollAreaRoot, ScrollAreaScrollbar, ScrollAreaThumb, ScrollAreaViewport } from 'reka-ui';
+import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogTrigger, Label } from 'reka-ui';
+import draggable from 'vuedraggable'
 import { computed, onMounted, ref, watch } from 'vue';
 import KanbanCardComp from './Kanban-Card.vue';
 
@@ -13,6 +14,16 @@ const props = defineProps<{
     isLoading: boolean;
 }>();
 
+const emit = defineEmits<{
+    'card-moved': [event: {
+        cardId: string;
+        fromColumnId: string;
+        toColumnId: string;
+        newIndex: number;
+        oldIndex: number;
+    }];
+}>();
+
 const kanbanStore = useKanbanStore();
 const authStore = useAuthStore();
 const columnData = ref<KanbanColumn>();
@@ -21,21 +32,90 @@ const cardInput = ref('');
 const columnName = computed(() => columnData.value?.name || '');
 const isLoadingCards = ref(false);
 const cardsInColumn = ref<KanbanCard[]>([]);
+const isDragging = ref(false);
+
+const onDragStart = () => {
+    console.log('Drag started');
+    isDragging.value = true;
+    document.body.classList.add('dragging');
+};
+
+const onDragEnd = () => {
+    console.log('Drag ended');
+    isDragging.value = false;
+    document.body.classList.remove('dragging');
+};
+
+const onChange = async (event: any) => {
+    console.log('Change event:', event);
+
+    // If card was added to this column from another column
+    if (event.added) {
+        const card = event.added.element;
+        const newIndex = event.added.newIndex;
+        const fromColumnId = card.columnId;
+
+        console.log('Card added:', card.id, 'from', fromColumnId, 'to', props.listId, 'at index', newIndex);
+
+        try {
+            await kanbanStore.moveCard(card.id, props.listId, newIndex);
+
+            emit('card-moved', {
+                cardId: card.id,
+                fromColumnId: fromColumnId,
+                toColumnId: props.listId,
+                newIndex,
+                oldIndex: event.added.oldIndex
+            });
+
+            await Promise.all([
+                kanbanStore.fetchCards(fromColumnId),
+                kanbanStore.fetchCards(props.listId)
+            ]);
+        } catch (error) {
+            console.error('Failed to move card:', error);
+            await fetchCardsForColumn(props.listId);
+        }
+    }
+
+    // If card was moved within the same column
+    if (event.moved) {
+        const card = event.moved.element;
+        const newIndex = event.moved.newIndex;
+        const oldIndex = event.moved.oldIndex;
+
+        console.log('Card moved within column:', card.id, 'from index', oldIndex, 'to', newIndex);
+
+        try {
+            await kanbanStore.moveCard(card.id, props.listId, newIndex);
+
+            emit('card-moved', {
+                cardId: card.id,
+                fromColumnId: props.listId,
+                toColumnId: props.listId,
+                newIndex,
+                oldIndex
+            });
+
+            await fetchCardsForColumn(props.listId);
+        } catch (error) {
+            console.error('Failed to move card:', error);
+            await fetchCardsForColumn(props.listId);
+        }
+    }
+};
 
 const fetchCardsForColumn = async (columnId: string) => {
     if (!columnId) return;
     isLoadingCards.value = true;
     try {
-        const response = await kanbanStore.fetchCards(columnId);
-        cardsInColumn.value = response;
-        console.log('cardsInColumn data: ', cardsInColumn.value)
+        await kanbanStore.fetchCards(columnId);
     } catch (error) {
         console.error('Failed to fetch cards:', error);
     } finally {
         isLoadingCards.value = false;
     }
 };
-
 
 const insertCard = () => {
     inputCard.value = true;
@@ -63,7 +143,6 @@ const addCard = async (columnId: string) => {
             inputCard.value = false;
 
             await fetchCardsForColumn(columnId);
-
         } catch (error) {
             console.error('Failed to create card:', error);
         }
@@ -74,10 +153,6 @@ const cancelCard = () => {
     cardInput.value = '';
     inputCard.value = false;
 };
-
-function getCardId(columnId: string) {
-    return kanbanStore.getCardsByColumnId(columnId);
-}
 
 onMounted(async () => {
     getColumnData(props.listId)
@@ -100,9 +175,10 @@ async function deleteColumn(columnId: string) {
     }
 }
 
-watch(() => props.listId, (newId) => {
-    console.log(`Kanban-List for listId: ${newId}`);
-}, { immediate: true })
+// Watch for changes in the store and update local state
+watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
+    cardsInColumn.value = [...newCards];
+}, { immediate: true, deep: true });
 
 </script>
 
@@ -149,44 +225,79 @@ watch(() => props.listId, (newId) => {
         </div>
 
         <div class="flex flex-col gap-2" v-show="props.listId != ''">
-            <ScrollAreaRoot style="--scrollbar-size: 10px" class="relative rounded-lg h-fit max-h-dvh overflow-hidden">
-                <ScrollAreaViewport class="w-full h-full rounded px-2">
-                    <KanbanCardComp v-for="kanbanCard in cardsInColumn" :key="kanbanCard.id"
-                        :kanbanCardId="kanbanCard.id" />
-                </ScrollAreaViewport>
-                <ScrollAreaScrollbar
-                    class="flex select-none touch-none p-0.5 z-20 bg-gray-800/90 transition-colors duration-[160ms] ease-out hover:bg-gray-700/80 data-[orientation=vertical]:w-2.5 data-[orientation=horizontal]:flex-col data-[orientation=horizontal]:h-2.5"
-                    orientation="vertical">
-                    <ScrollAreaThumb
-                        class="flex-1 bg-gray-200 rounded-[10px] relative before:content-[''] before:absolute before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:w-full before:h-full before:min-w-[44px] before:min-h-[44px]" />
-                </ScrollAreaScrollbar>
-            </ScrollAreaRoot>
-            <button @click="insertCard" v-if="!inputCard"
-                class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-2 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">
-                Add Card
-            </button>
-            <div class="flex flex-col shadow-sm space-y-2 px-2 py-0.5 pb-2" v-else>
-                <div class="flex flex-col bg-white">
-                    <input type="text" name="card-title" id="card-title" class="basic-input h-8"
-                        placeholder="Enter card title" @keyup.enter="addCard(props.listId)" v-model="cardInput"
-                        required />
-                </div>
-                <div class="flex flex-row space-x-2 px-0.5">
-                    <button type="button" @click="addCard(props.listId)"
-                        class="bg-black text-white rounded-sm hover:bg-gray-600/90 px-2 text-sm py-0.5 hover:cursor-pointer">
-                        Add
-                    </button>
-                    <button type="button" @click="cancelCard"
-                        class="border-gray-700 border rounded-sm px-2 hover:underline text-sm py-0.5 hover:cursor-pointer">
-                        Cancel
-                    </button>
-                </div>
-            </div>
+            <draggable v-model="cardsInColumn" :group="{ name: 'kanban', pull: true, put: true }" :animation="200"
+                ghost-class="ghost-card" chosen-class="chosen-card" drag-class="drag-card" :disabled="isLoadingCards"
+                class="task-list ease-in px-2 py-2" @start="onDragStart" @end="onDragEnd" @change="onChange"
+                item-key="id" tag="div">
+                <template #item="{ element: card }">
+                    <KanbanCardComp :kanbanCardId="card.id" :is-dragging="isDragging" />
+                </template>
+                <template #footer>
+                    <div v-if="!inputCard" class="mt-2">
+                        <button @click="insertCard"
+                            class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-2 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">
+                            Add Card
+                        </button>
+                    </div>
+                    <div v-else class="flex flex-col shadow-sm space-y-2 px-2 py-0.5 pb-2 mt-2">
+                        <div class="flex flex-col bg-white">
+                            <input type="text" name="card-title" id="card-title" class="basic-input h-8"
+                                placeholder="Enter card title" @keyup.enter="addCard(props.listId)" v-model="cardInput"
+                                required />
+                        </div>
+                        <div class="flex flex-row space-x-2 px-0.5">
+                            <button type="button" @click="addCard(props.listId)"
+                                class="bg-black text-white rounded-sm hover:bg-gray-600/90 px-2 text-sm py-0.5 hover:cursor-pointer">
+                                Add
+                            </button>
+                            <button type="button" @click="cancelCard"
+                                class="border-gray-700 border rounded-sm px-2 hover:underline text-sm py-0.5 hover:cursor-pointer">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </draggable>
         </div>
 
     </div>
 </template>
 
-<style lang="">
+<style scoped>
+.ghost-card {
+    opacity: 0.5;
+    background: #e3f2fd;
+    transform: rotate(2deg);
+    border: 2px dashed #2196f3;
+}
 
+.chosen-card {
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.drag-card {
+    opacity: 0.9;
+    transform: rotate(5deg);
+}
+
+:global(body.dragging) .task-list {
+    background-color: #f9f9f9;
+}
+
+.task-list {
+    min-height: 100px;
+    transition: background-color 0.2s ease;
+}
+
+.task-list:focus-within {
+    outline: 2px solid #2196f3;
+    outline-offset: 2px;
+}
+
+:global(body.dragging) {
+    user-select: none;
+    cursor: grabbing;
+}
 </style>

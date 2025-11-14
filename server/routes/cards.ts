@@ -335,105 +335,101 @@ cardsRoutes.post(
   }
 );
 
-// Update card
-cardsRoutes.put(
-  '/:id',
+cardsRoutes.patch(
+  '/:id/move',
   requireAuth(),
   validator('json', (value: unknown, c) => {
-    const body = value as UpdateCardRequest;
-
-    if (body.title !== undefined) {
-      if (!body.title?.trim()) {
-        return c.json({ error: 'Title cannot be empty' } as ErrorResponse, 400);
-      }
-      if (body.title.length > 200) {
-        return c.json({ error: 'Title must be less than 200 characters' } as ErrorResponse, 400);
-      }
+    const body = value as { columnId: string; order: number };
+    
+    if (!body.columnId?.trim()) {
+      return c.json({ error: 'Column ID is required' }, 400);
     }
-
-    if (body.description !== undefined && body.description && body.description.length > 2000) {
-      return c.json({ error: 'Description must be less than 2000 characters' } as ErrorResponse, 400);
+    
+    if (typeof body.order !== 'number') {
+      return c.json({ error: 'Order must be a number' }, 400);
     }
-
-    if (body.status !== undefined) {
-      const validStatuses = ['todo', 'in_progress', 'review', 'done'];
-      if (!validStatuses.includes(body.status)) {
-        return c.json({ error: 'Invalid status' } as ErrorResponse, 400);
-      }
-    }
-
-    if (body.dueDate !== undefined && body.dueDate) {
-      const parsedDate = new Date(body.dueDate);
-      if (Number.isNaN(parsedDate.getTime())) {
-        return c.json({ error: 'Invalid due date format' } as ErrorResponse, 400);
-      }
-    }
-
+    
     return body;
   }),
   async (c) => {
     try {
       const id = c.req.param('id');
-      const updateData = c.req.valid('json') as UpdateCardRequest;
-      // const currentUser = c.get('user'); // Unused for now
-
-      // Check if card exists
+      const { columnId, order: newOrder } = c.req.valid('json') as { columnId: string; order: number };
       const [existingCard] = await db
         .select()
         .from(kanbanCardsTable)
         .where(eq(kanbanCardsTable.id, id))
         .limit(1);
-
+      
       if (!existingCard) {
         throw new AuthException('Card not found', 404);
       }
 
-      // Prepare database update data
-      const dbUpdateData: DatabaseUpdateCardRequest = {};
+      const oldColumnId = existingCard.columnId;
+      const oldOrder = existingCard.order;
+      await db.transaction(async (tx) => {
+        if (oldColumnId === columnId) {
+          if (oldOrder === newOrder) {
+            return;
+          }
 
-      // Parse due date if provided
-      if (updateData.dueDate !== undefined) {
-        dbUpdateData.dueDate = updateData.dueDate ? new Date(updateData.dueDate) : null;
-      }
+          const cardsInColumn = await tx
+            .select()
+            .from(kanbanCardsTable)
+            .where(eq(kanbanCardsTable.columnId, columnId))
+            .orderBy(kanbanCardsTable.order);
+          
+          const otherCards = cardsInColumn.filter(c => c.id !== id);
+          otherCards.splice(newOrder, 0, existingCard);
 
-      // Clean up data
-      if (updateData.title !== undefined) {
-        dbUpdateData.title = updateData.title.trim();
-      }
-      if (updateData.description !== undefined) {
-        dbUpdateData.description = updateData.description?.trim() || null;
-      }
-      if (updateData.columnId !== undefined) {
-        dbUpdateData.columnId = updateData.columnId;
-      }
-      if (updateData.assigneeId !== undefined) {
-        dbUpdateData.assigneeId = updateData.assigneeId || null;
-      }
-      if (updateData.priorityId !== undefined) {
-        dbUpdateData.priorityId = updateData.priorityId;
-      }
-      if (updateData.order !== undefined) {
-        dbUpdateData.order = updateData.order;
-      }
-      if (updateData.status !== undefined) {
-        dbUpdateData.status = updateData.status;
-      }
-      if (updateData.estimatedHours !== undefined) {
-        dbUpdateData.estimatedHours = updateData.estimatedHours;
-      }
-      if (updateData.actualHours !== undefined) {
-        dbUpdateData.actualHours = updateData.actualHours;
-      }
+          for (let i = 0; i < otherCards.length; i++) {
+            await tx
+              .update(kanbanCardsTable)
+              .set({ order: i })
+              .where(eq(kanbanCardsTable.id, otherCards[i].id));
+          }
+        }
+        else {
+          const cardsInOldColumn = await tx
+            .select()
+            .from(kanbanCardsTable)
+            .where(and(
+              eq(kanbanCardsTable.columnId, oldColumnId),
+              ne(kanbanCardsTable.id, id)
+            ))
+            .orderBy(kanbanCardsTable.order);
 
-      // Update card
+          for (let i = 0; i < cardsInOldColumn.length; i++) {
+            await tx
+              .update(kanbanCardsTable)
+              .set({ order: i })
+              .where(eq(kanbanCardsTable.id, cardsInOldColumn[i].id));
+          }
+          
+          const cardsInNewColumn = await tx
+            .select()
+            .from(kanbanCardsTable)
+            .where(eq(kanbanCardsTable.columnId, columnId))
+            .orderBy(kanbanCardsTable.order);
+          cardsInNewColumn.splice(newOrder, 0, { 
+            ...existingCard, 
+            columnId, 
+            order: newOrder 
+          });
+          
+          for (let i = 0; i < cardsInNewColumn.length; i++) {
+            await tx
+              .update(kanbanCardsTable)
+              .set({ 
+                order: i,
+                columnId: cardsInNewColumn[i].columnId 
+              })
+              .where(eq(kanbanCardsTable.id, cardsInNewColumn[i].id));
+          }
+        }
+      });
+    
       const [updatedCard] = await db
-        .update(kanbanCardsTable)
-        .set(dbUpdateData)
-        .where(eq(kanbanCardsTable.id, id))
-        .returning();
-
-      // Fetch complete card with user info
-      const [completeCard] = await db
         .select({
           ...getTableColumns(kanbanCardsTable),
           assignee: {
@@ -448,38 +444,29 @@ cardsRoutes.put(
         })
         .from(kanbanCardsTable)
         .leftJoin(usersTable, eq(kanbanCardsTable.assigneeId, usersTable.id))
-        .where(eq(kanbanCardsTable.id, updatedCard.id))
+        .where(eq(kanbanCardsTable.id, id))
         .limit(1);
-
+      
       const safeCard = {
-        ...completeCard,
-        assignee: completeCard.assignee ? createSafeUser({
-          id: (completeCard.assignee as any).id,
-          name: (completeCard.assignee as any).name,
-          email: (completeCard.assignee as any).email,
+        ...updatedCard,
+        assignee: updatedCard.assignee ? createSafeUser({
+          id: updatedCard.assignee.id,
+          name: updatedCard.assignee.name,
+          email: updatedCard.assignee.email,
           passwordHash: '',
-          isAdmin: (completeCard.assignee as any).isAdmin,
-          avatar: (completeCard.assignee as any).avatar,
-          status: (completeCard.assignee as any).status,
+          isAdmin: updatedCard.assignee.isAdmin,
+          avatar: updatedCard.assignee.avatar,
+          status: updatedCard.assignee.status,
           lastLoginAt: null,
           emailVerifiedAt: null,
-          createdAt: (completeCard.assignee as any).createdAt,
-          updatedAt: (completeCard.assignee as any).createdAt
+          createdAt: updatedCard.assignee.createdAt,
+          updatedAt: updatedCard.assignee.createdAt
         }) : undefined,
       };
-
-      const response: CardResponse = {
-        card: safeCard,
-      };
-
-      return c.json(response);
+      return c.json({ card: safeCard });
     } catch (error) {
-      if (error instanceof AuthException) {
-        throw error;
-      }
-
-      console.error('Update card error:', error);
-      throw new AuthException('Failed to update card', 500);
+      console.error('Move card error:', error);
+      throw new AuthException('Failed to move card', 500);
     }
   }
 );

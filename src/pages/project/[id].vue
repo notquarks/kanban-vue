@@ -201,8 +201,8 @@ const handleCardMoved = async (event: {
 </script>
 
 <template>
-    <div class="flex flex-col w-full h-full grow">
-        <TabsRoot class="flex flex-col w-full justify-center grow" v-model="activeTab">
+    <div class="flex flex-col w-full min-h-0 flex-1">
+        <TabsRoot class="flex flex-col w-full justify-center flex-1 min-h-0" v-model="activeTab">
             <TabsList class="relative shrink-0 flex border-b pl-4 pt-2 border-gray-500 gap-2">
                 <TabsTrigger v-for="(board, index) in boards" :key="`board-${board.id}`" :value="`tab${index}`"
                     class="px-1 pl-3 py-1 hover:cursor-pointer bg-gray-500 text-white data-[state=active]:bg-gray-700 data-[state=active]:font-semibold flex flex-row items-center justify-between gap-2 rounded-t-sm">
@@ -299,48 +299,50 @@ const handleCardMoved = async (event: {
             </TabsList>
 
             <TabsContent v-for="(board, index) in boards" :key="`content-${board.id}`"
-                class="grow bg-white rounded-b-md outline-none w-full flex flex-col max-h-full" :value="`tab${index}`"
-                force-mount :hidden="activeTab !== `tab${index}`">
-                <div class="flex flex-col space-y-4 p-6 flex-grow overflow-x-scroll">
+                class="flex-1 bg-white rounded-b-md outline-none w-full flex flex-col min-h-0 overflow-hidden"
+                :value="`tab${index}`" force-mount :hidden="activeTab !== `tab${index}`">
+                <div class="flex flex-col space-y-4 pt-6 px-4 h-full min-h-0 overflow-hidden">
                     <div class="flex flex-row space-x-4 items-center w-full">
                         <button class="underline hover:cursor-pointer">Labels</button>
                     </div>
-                    <div class="flex flex-row w-full min-w-dvw">
-                        <draggable :list="boardColumnsMap.get(board.id) || []" @start="onColumnDragStart"
-                            @end="onColumnDragEnd" @change="(e: any) => onColumnChange(e, board.id)" item-key="id"
-                            :animation="200" handle=".column-drag-handle" ghost-class="column-ghost"
-                            chosen-class="column-chosen" drag-class="column-drag" class="flex flex-row space-x-4"
-                            group="columns">
-                            <template #item="{ element: cardColumn }">
-                                <div :key="cardColumn.id" class="column-wrapper">
-                                    <KanbanList @card-moved="handleCardMoved" :listId="cardColumn.id"
-                                        :boardId="board.id" :projectId="projectId" :isLoading="false" />
-                                </div>
-                            </template>
-                        </draggable>
+                    <div class="flex-1 overflow-x-auto overflow-y-hidden py-4 min-h-0">
+                        <div class="flex flex-row space-x-4 h-full">
+                            <draggable :list="boardColumnsMap.get(board.id) || []" @start="onColumnDragStart"
+                                @end="onColumnDragEnd" @change="(e: any) => onColumnChange(e, board.id)" item-key="id"
+                                :animation="200" handle=".column-drag-handle" ghost-class="column-ghost"
+                                chosen-class="column-chosen" drag-class="column-drag"
+                                class="flex flex-row space-x-4 h-full" group="columns">
+                                <template #item="{ element: cardColumn }">
+                                    <div :key="cardColumn.id" class="column-wrapper h-full">
+                                        <KanbanList @card-moved="handleCardMoved" :listId="cardColumn.id"
+                                            :boardId="board.id" :projectId="projectId" :isLoading="false" />
+                                    </div>
+                                </template>
+                            </draggable>
 
-                        <div
-                            class="border border-gray-400 w-2xs h-fit rounded-sm transition-all duration-100 ease-in ml-4">
-                            <button @click="insertColumn" v-if="!inputColumn"
-                                class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-3 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">
-                                Add Column
-                            </button>
-                            <div class="flex flex-col shadow-sm space-y-2 px-2 py-3 bg-gray-200/60" v-else>
-                                <div class="flex flex-col">
-                                    <input type="text" name="card-title" id="card-title"
-                                        class="basic-input h-8 bg-white" placeholder="Enter column name"
-                                        @keyup.enter="addColumn(board.id, columnInput)" v-model="columnInput"
-                                        required />
-                                </div>
-                                <div class="flex flex-row space-x-2">
-                                    <button type="button" @click="addColumn(board.id, columnInput)"
-                                        class="bg-black text-white rounded-sm hover:bg-gray-600/90 px-2 text-sm py-0.5 hover:cursor-pointer">
-                                        Add
-                                    </button>
-                                    <button type="button" @click="cancelColumn"
-                                        class="border-gray-700 border rounded-sm px-2 hover:underline text-sm py-0.5 hover:cursor-pointer">
-                                        Cancel
-                                    </button>
+                            <div
+                                class="border border-gray-400 w-2xs h-fit rounded-sm transition-all duration-100 ease-in flex-shrink-0">
+                                <button @click="insertColumn" v-if="!inputColumn"
+                                    class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-3 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">
+                                    Add Column
+                                </button>
+                                <div class="flex flex-col shadow-sm space-y-2 px-2 py-3 bg-gray-200/60" v-else>
+                                    <div class="flex flex-col">
+                                        <input type="text" name="card-title" id="card-title"
+                                            class="basic-input h-8 bg-white" placeholder="Enter column name"
+                                            @keyup.enter="addColumn(board.id, columnInput)" v-model="columnInput"
+                                            required />
+                                    </div>
+                                    <div class="flex flex-row space-x-2">
+                                        <button type="button" @click="addColumn(board.id, columnInput)"
+                                            class="bg-black text-white rounded-sm hover:bg-gray-600/90 px-2 text-sm py-0.5 hover:cursor-pointer">
+                                            Add
+                                        </button>
+                                        <button type="button" @click="cancelColumn"
+                                            class="border-gray-700 border rounded-sm px-2 hover:underline text-sm py-0.5 hover:cursor-pointer">
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -6,12 +6,12 @@ import { RouterView, useRoute } from "vue-router";
 
 const authStore = useAuthStore();
 const route = useRoute();
+
 const isFixedLayout = computed(() => {
     return route.path.startsWith('/project/');
 });
 
 onMounted(async () => {
-
     if (!authStore.isAuthenticated && authStore.token) {
         try {
             await authStore.checkAuth();
@@ -21,12 +21,12 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="max-w-dvw h-full flex flex-col w-full bg-gray-50"
-        :class="isFixedLayout ? 'max-h-dvh overflow-hidden h-dvh' : 'min-h-dvh'">
+    <div class="max-w-dvw flex flex-col w-full bg-gray-50"
+        :class="isFixedLayout ? 'h-dvh overflow-hidden' : 'min-h-dvh'">
         <header class="sticky top-0 z-50 w-full border-b bg-white flex-shrink-0">
             <NavBar v-if="authStore.isAuthenticated" />
         </header>
-        <main class="flex w-full flex-grow" :class="isFixedLayout ? 'overflow-auto min-h-0 max-h-full' : ''">
+        <main class="flex w-full flex-grow" :class="isFixedLayout ? 'overflow-hidden min-h-0' : ''">
             <RouterView />
         </main>
     </div>

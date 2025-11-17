@@ -174,8 +174,10 @@ watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
 </script>
 
 <template>
-    <div class="bg-gray-200/60 shadow-xs shadow-gray-600/70 rounded-sm w-2xs max-h-full border border-grey-300/80">
-        <div class="flex flex-row items-center justify-between px-2 py-3 font-bold">
+    <div
+        class="bg-gray-200/60 shadow-xs shadow-gray-600/70 rounded-sm w-2xs border border-grey-300/80 flex flex-col max-h-full">
+        <div
+            class="flex-shrink-0 flex flex-row items-center justify-between px-2 py-3 font-bold border-b border-gray-300">
             <div class="flex flex-row items-center gap-1 flex-1 min-w-0">
                 <div class="column-drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-gray-300 rounded transition-colors flex-shrink-0"
                     title="Drag to reorder column">
@@ -224,17 +226,17 @@ watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
             </DialogRoot>
         </div>
 
-        <div class="flex flex-col max-h-full" v-show="props.listId != ''">
+        <div class="flex-1 flex flex-col min-h-0 overflow-hidden" v-show="props.listId != ''">
             <draggable v-model="cardsInColumn" :group="{ name: 'kanban', pull: true, put: ['kanban'] }" :animation="200"
                 ghost-class="ghost-card" chosen-class="chosen-card" drag-class="drag-card" :disabled="isLoadingCards"
-                class="task-list ease-in px-2" @start="onDragStart" @end="onDragEnd" @change="onChange" item-key="id"
-                tag="div">
+                class="task-list flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 min-h-0" @start="onDragStart"
+                @end="onDragEnd" @change="onChange" item-key="id" tag="div">
                 <template #item="{ element: card }">
                     <KanbanCardComp :kanbanCardId="card.id" :is-dragging="isDragging" />
                 </template>
 
             </draggable>
-            <div>
+            <div class="flex-shrink-0 border-t border-gray-300">
                 <div v-if="!inputCard" class="mt-2">
                     <button @click="insertCard"
                         class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-2 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">

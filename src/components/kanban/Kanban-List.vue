@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useKanbanStore, type KanbanCard, type KanbanColumn } from '@/stores/kanban';
 import { useAuthStore } from '@/stores/auth';
-import { Pencil } from 'lucide-vue-next';
+import { useKanbanStore, type KanbanCard, type KanbanColumn } from '@/stores/kanban';
+import { GripVertical, Pencil } from 'lucide-vue-next';
 import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogTrigger, Label } from 'reka-ui';
-import draggable from 'vuedraggable'
 import { computed, onMounted, ref, watch } from 'vue';
+import draggable from 'vuedraggable';
 import KanbanCardComp from './Kanban-Card.vue';
 
 
@@ -34,7 +34,6 @@ const isLoadingCards = ref(false);
 const cardsInColumn = ref<KanbanCard[]>([]);
 const isDragging = ref(false);
 
-// Drag handlers
 const onDragStart = () => {
     console.log('Drag started');
     isDragging.value = true;
@@ -48,15 +47,10 @@ const onDragEnd = () => {
 };
 
 const onChange = async (event: any) => {
-    console.log('Change event:', event);
-
-    // If card was added to this column from another column
     if (event.added) {
         const card = event.added.element;
         const newIndex = event.added.newIndex;
         const fromColumnId = card.columnId;
-
-        console.log('Card added:', card.id, 'from', fromColumnId, 'to', props.listId, 'at index', newIndex);
 
         try {
             await kanbanStore.moveCard(card.id, props.listId, newIndex);
@@ -69,7 +63,6 @@ const onChange = async (event: any) => {
                 oldIndex: event.added.oldIndex
             });
 
-            // Refetch both columns
             await Promise.all([
                 kanbanStore.fetchCards(fromColumnId),
                 kanbanStore.fetchCards(props.listId)
@@ -80,13 +73,10 @@ const onChange = async (event: any) => {
         }
     }
 
-    // If card was moved within the same column
     if (event.moved) {
         const card = event.moved.element;
         const newIndex = event.moved.newIndex;
         const oldIndex = event.moved.oldIndex;
-
-        console.log('Card moved within column:', card.id, 'from index', oldIndex, 'to', newIndex);
 
         try {
             await kanbanStore.moveCard(card.id, props.listId, newIndex);
@@ -177,7 +167,6 @@ async function deleteColumn(columnId: string) {
     }
 }
 
-// Watch for changes in the store and update local state
 watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
     cardsInColumn.value = [...newCards];
 }, { immediate: true, deep: true });
@@ -185,9 +174,18 @@ watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
 </script>
 
 <template>
-    <div class="bg-gray-200/60 shadow-xs shadow-gray-600/70 rounded-sm w-2xs border border-grey-300/80">
-        <div class="flex flex-row justify-between px-2 py-3 font-bold">
-            <h2>{{ columnData?.name }}</h2>
+    <div class="bg-gray-200/60 shadow-xs shadow-gray-600/70 rounded-sm w-2xs max-h-full border border-grey-300/80">
+        <div class="flex flex-row items-center justify-between px-2 py-3 font-bold">
+            <div class="flex flex-row items-center gap-1 flex-1 min-w-0">
+                <div class="column-drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-gray-300 rounded transition-colors flex-shrink-0"
+                    title="Drag to reorder column">
+                    <GripVertical :size="18" class="text-gray-600" />
+                </div>
+                <h2 class="truncate flex-1">{{ columnData?.name }}</h2>
+                <span class="text-xs bg-gray-400 text-gray-800 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                    {{ cardsInColumn.length }}
+                </span>
+            </div>
             <DialogRoot>
                 <DialogTrigger class="hover:bg-gray-200 rounded-xs">
                     <Pencil class="p-1" />
@@ -226,80 +224,96 @@ watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
             </DialogRoot>
         </div>
 
-        <div class="flex flex-col gap-2" v-show="props.listId != ''">
-            <draggable v-model="cardsInColumn" :group="{ name: 'kanban', pull: true, put: true }" :animation="200"
+        <div class="flex flex-col max-h-full" v-show="props.listId != ''">
+            <draggable v-model="cardsInColumn" :group="{ name: 'kanban', pull: true, put: ['kanban'] }" :animation="200"
                 ghost-class="ghost-card" chosen-class="chosen-card" drag-class="drag-card" :disabled="isLoadingCards"
-                class="task-list ease-in px-2 py-2" @start="onDragStart" @end="onDragEnd" @change="onChange"
-                item-key="id" tag="div">
+                class="task-list ease-in px-2" @start="onDragStart" @end="onDragEnd" @change="onChange" item-key="id"
+                tag="div">
                 <template #item="{ element: card }">
                     <KanbanCardComp :kanbanCardId="card.id" :is-dragging="isDragging" />
                 </template>
-                <template #footer>
-                    <div v-if="!inputCard" class="mt-2">
-                        <button @click="insertCard"
-                            class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-2 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">
-                            Add Card
+
+            </draggable>
+            <div>
+                <div v-if="!inputCard" class="mt-2">
+                    <button @click="insertCard"
+                        class="flex w-full h-full text-sm hover:underline transition-all duration-100 ease-in bg-gray-200 py-2 px-2 rounded-sm hover:bg-gray-300/90 hover:cursor-pointer">
+                        Add Card
+                    </button>
+                </div>
+                <div v-else class="flex flex-col shadow-sm space-y-2 px-2 py-0.5 pb-2 mt-2">
+                    <div class="flex flex-col bg-white">
+                        <input type="text" name="card-title" id="card-title" class="basic-input h-8"
+                            placeholder="Enter card title" @keyup.enter="addCard(props.listId)" v-model="cardInput"
+                            required />
+                    </div>
+                    <div class="flex flex-row space-x-2 px-0.5">
+                        <button type="button" @click="addCard(props.listId)"
+                            class="bg-black text-white rounded-sm hover:bg-gray-600/90 px-2 text-sm py-0.5 hover:cursor-pointer">
+                            Add
+                        </button>
+                        <button type="button" @click="cancelCard"
+                            class="border-gray-700 border rounded-sm px-2 hover:underline text-sm py-0.5 hover:cursor-pointer">
+                            Cancel
                         </button>
                     </div>
-                    <div v-else class="flex flex-col shadow-sm space-y-2 px-2 py-0.5 pb-2 mt-2">
-                        <div class="flex flex-col bg-white">
-                            <input type="text" name="card-title" id="card-title" class="basic-input h-8"
-                                placeholder="Enter card title" @keyup.enter="addCard(props.listId)" v-model="cardInput"
-                                required />
-                        </div>
-                        <div class="flex flex-row space-x-2 px-0.5">
-                            <button type="button" @click="addCard(props.listId)"
-                                class="bg-black text-white rounded-sm hover:bg-gray-600/90 px-2 text-sm py-0.5 hover:cursor-pointer">
-                                Add
-                            </button>
-                            <button type="button" @click="cancelCard"
-                                class="border-gray-700 border rounded-sm px-2 hover:underline text-sm py-0.5 hover:cursor-pointer">
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </draggable>
+                </div>
+            </div>
         </div>
 
     </div>
 </template>
 
+
 <style scoped>
+.column-drag-handle {
+    touch-action: none;
+    user-select: none;
+}
+
+.column-drag-handle:active {
+    cursor: grabbing !important;
+}
+
 .ghost-card {
-    opacity: 0.5;
-    background: #e3f2fd;
-    transform: rotate(2deg);
-    border: 2px dashed #2196f3;
+    opacity: 0.6;
+    /*height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;*/
+    /*overflow: hidden;*/
 }
 
 .chosen-card {
-    transform: scale(1.02);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    cursor: grabbing !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    transform: scale(1.03);
     z-index: 1000;
+    transition: all 0.2s ease;
 }
 
 .drag-card {
-    opacity: 0.9;
-    transform: rotate(5deg);
-}
-
-:global(body.dragging) .task-list {
-    background-color: #f9f9f9;
+    opacity: 0.8;
+    cursor: grabbing !important;
+    transform: rotate(3deg);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .task-list {
-    min-height: 100px;
-    transition: background-color 0.2s ease;
+    /*min-height: 100px;*/
+    max-height: 100%;
+    height: fit-content;
+    transition: all 0.3s ease;
+    overflow-y: auto;
+    border: 2px solid transparent;
 }
 
-.task-list:focus-within {
-    outline: 2px solid #2196f3;
-    outline-offset: 2px;
-}
 
 :global(body.dragging) {
     user-select: none;
-    cursor: grabbing;
+    cursor: grabbing !important;
+}
+
+:global(body.dragging) * {
+    cursor: grabbing !important;
 }
 </style>

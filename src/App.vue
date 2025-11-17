@@ -1,30 +1,35 @@
 <script setup lang="ts">
 import NavBar from "@/components/NavBar.vue";
-import { RouterView } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
+import { RouterView, useRoute } from "vue-router";
 
 const authStore = useAuthStore();
+const route = useRoute();
+const isFixedLayout = computed(() => {
+    return route.path.startsWith('/project/');
+});
 
 onMounted(async () => {
 
-  if (!authStore.isAuthenticated && authStore.token) {
-    try {
-      await authStore.checkAuth();
-    } catch (error) { }
-  }
+    if (!authStore.isAuthenticated && authStore.token) {
+        try {
+            await authStore.checkAuth();
+        } catch (error) { }
+    }
 });
 </script>
 
 <template>
-  <div class="max-w-dvw h-full flex flex-col w-full bg-gray-50">
-    <header class="sticky top-0 z-50 w-full border-b bg-white">
-      <NavBar v-if="authStore.isAuthenticated" />
-    </header>
-    <main class="flex w-full h-full flex-grow">
-      <RouterView />
-    </main>
-  </div>
+    <div class="max-w-dvw h-full flex flex-col w-full bg-gray-50"
+        :class="isFixedLayout ? 'max-h-dvh overflow-hidden h-dvh' : 'min-h-dvh'">
+        <header class="sticky top-0 z-50 w-full border-b bg-white flex-shrink-0">
+            <NavBar v-if="authStore.isAuthenticated" />
+        </header>
+        <main class="flex w-full flex-grow" :class="isFixedLayout ? 'overflow-auto min-h-0 max-h-full' : ''">
+            <RouterView />
+        </main>
+    </div>
 </template>
 
 <style scoped></style>

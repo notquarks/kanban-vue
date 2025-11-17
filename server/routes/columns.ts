@@ -40,3 +40,64 @@ columnsRoutes.get('/:id/cards', async (c) => {
   const cards = await db.select().from(kanbanCardsTable).where(eq(kanbanCardsTable.columnId, columnId)).orderBy(kanbanCardsTable.order);
   return c.json({ cards });
 });
+
+columnsRoutes.patch('/:id/reorder', async (c) => {
+  const columnId = c.req.param('id');
+  const { boardId, newOrder } = await c.req.json();
+
+  if (typeof newOrder !== 'number' || newOrder < 0) {
+    return c.json({ error: 'Invalid order value' }, 400);
+  }
+
+  try {
+    const [columnToMove] = await db
+      .select()
+      .from(kanbanColumnsTable)
+      .where(eq(kanbanColumnsTable.id, columnId));
+
+    if (!columnToMove) {
+      return c.json({ error: 'Column not found' }, 404);
+    }
+
+    const oldOrder = columnToMove.order;
+
+    const allColumns = await db
+      .select()
+      .from(kanbanColumnsTable)
+      .where(eq(kanbanColumnsTable.boardId, boardId))
+      .orderBy(kanbanColumnsTable.order);
+
+    if (oldOrder < newOrder) {
+      for (const col of allColumns) {
+        if (col.id === columnId) continue;
+        if (col.order > oldOrder && col.order <= newOrder) {
+          await db
+            .update(kanbanColumnsTable)
+            .set({ order: col.order - 1 })
+            .where(eq(kanbanColumnsTable.id, col.id));
+        }
+      }
+    } else if (oldOrder > newOrder) {
+      for (const col of allColumns) {
+        if (col.id === columnId) continue;
+        if (col.order >= newOrder && col.order < oldOrder) {
+          await db
+            .update(kanbanColumnsTable)
+            .set({ order: col.order + 1 })
+            .where(eq(kanbanColumnsTable.id, col.id));
+        }
+      }
+    }
+
+    const [updatedColumn] = await db
+      .update(kanbanColumnsTable)
+      .set({ order: newOrder })
+      .where(eq(kanbanColumnsTable.id, columnId))
+      .returning();
+
+    return c.json({ column: updatedColumn });
+  } catch (error) {
+    console.error('Error reordering column:', error);
+    return c.json({ error: 'Failed to reorder column' }, 500);
+  }
+});

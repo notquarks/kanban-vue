@@ -265,6 +265,36 @@ const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
     }
   };
 
+  const reorderColumn = async (columnId: string, boardId: string, newOrder: number): Promise<KanbanColumn> => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const response = await api.patch(`/columns/${columnId}/reorder`, {
+        boardId,
+        newOrder
+      });
+      const updatedColumn = response.column || response;
+      
+      const index = columns.value.findIndex((c: KanbanColumn) => c.id === columnId);
+      if (index !== -1) {
+        columns.value[index] = {
+          ...columns.value[index],
+          ...updatedColumn,
+          order: newOrder
+        };
+      }
+      await fetchColumns(boardId);
+      
+      return updatedColumn;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : "Unable to reorder column";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   // Cards
   const fetchCards = async (columnId?: string): Promise<KanbanCard[]> => {
     loading.value = true;
@@ -469,6 +499,7 @@ const fetchBoards = async (projectId?: string): Promise<KanbanBoard[]> => {
     createColumn,
     updateColumn,
     deleteColumn,
+    reorderColumn,
 
     // Card actions
     fetchCards,

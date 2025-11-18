@@ -11,7 +11,6 @@ import {
     LayoutList,
     Plus,
     SquareCheckBig,
-    SquarePlus,
     TextInitial,
     X,
 } from "lucide-vue-next";
@@ -21,8 +20,10 @@ import {
     DialogOverlay,
     DialogPortal,
     DialogTitle,
+    ProgressIndicator,
+    ProgressRoot,
 } from "reka-ui";
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import KanbanTodo from "./Kanban-Todo.vue";
 
 const props = defineProps<{
@@ -41,6 +42,16 @@ const members = ref<any[]>([]);
 const newTodoTitle = ref("");
 const newAttachment = ref<File | null>(null);
 const openInputTask = ref(false)
+
+
+const progressValue = computed(() => {
+    if (!todos.value || todos.value.length === 0) {
+        return 0;
+    }
+    const completedCount = todos.value.filter(t => t.isCompleted).length;
+    console.log('Progress: ', (completedCount / todos.value.length) * 100)
+    return (completedCount / todos.value.length) * 100;
+});
 
 
 watch(
@@ -197,6 +208,14 @@ const handleDeleteTodo = async (id: string) => {
                         <div class="flex flex-row items-center gap-3">
                             <SquareCheckBig />
                             <p class="text-lg font-medium">Task</p>
+                        </div>
+                        <div class="ml-10" v-show="todos.length">
+                            <ProgressRoot :model-value="progressValue"
+                                class="rounded-xs relative h-2 w-full overflow-hidden bg-gray-100 border border-muted">
+                                <ProgressIndicator
+                                    class="indicator rounded-xs block relative w-full h-full bg-green-500 transition-transform overflow-hidden duration-[450ms] ease-[cubic-bezier(0.65, 0, 0.35, 1)] after:animate-progress after:content-[''] after:absolute after:inset-0 after:bg-[length:30px_30px]"
+                                    :style="`transform: translateX(-${100 - progressValue}%)`" />
+                            </ProgressRoot>
                         </div>
                         <div class="flex flex-col gap-1 pl-10 w-full">
                             <div class="flex w-full flex-col gap-2">

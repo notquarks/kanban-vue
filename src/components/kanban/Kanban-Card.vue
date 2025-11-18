@@ -59,7 +59,7 @@ onMounted(async () => {
 
 <template>
     <DialogRoot class="flex flex-col w-full">
-        <DialogTrigger class="flex flex-col w-full">
+        <DialogTrigger class="flex flex-col w-full" :disabled="isDragging">
             <div :class="[
                 'flex flex-col gap-2 mt-1 w-full h-fit rounded bg-white border border-gray-400/80 px-2 py-1.5 shadow hover:bg-gray-300/80 hover:cursor-pointer transition-all duration-200',
                 statusColor,

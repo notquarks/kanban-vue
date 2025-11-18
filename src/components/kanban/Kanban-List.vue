@@ -230,7 +230,7 @@ watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
             <draggable v-model="cardsInColumn" :group="{ name: 'kanban', pull: true, put: ['kanban'] }" :animation="200"
                 ghost-class="ghost-card" chosen-class="chosen-card" drag-class="drag-card" :disabled="isLoadingCards"
                 class="task-list flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 min-h-0" @start="onDragStart"
-                @end="onDragEnd" @change="onChange" item-key="id" tag="div">
+                @end="onDragEnd" @change="onChange" item-key="id" tag="div" handle=".drag-handle">
                 <template #item="{ element: card }">
                     <KanbanCardComp :kanbanCardId="card.id" :is-dragging="isDragging" />
                 </template>

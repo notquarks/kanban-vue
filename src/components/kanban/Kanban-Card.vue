@@ -58,37 +58,39 @@ onMounted(async () => {
 </script>
 
 <template>
-    <DialogRoot class="flex flex-col w-full">
-        <DialogTrigger class="flex flex-col w-full" :disabled="isDragging">
-            <div :class="[
-                'flex flex-col gap-2 mt-1 w-full h-fit rounded bg-white border border-gray-400/80 px-2 py-1.5 shadow hover:bg-gray-300/80 hover:cursor-pointer transition-all duration-200',
-                statusColor,
-                { 'opacity-50 cursor-not-allowed': cardData?.status === 'done' },
-                { 'shadow-xl scale-105': isDragging }
-            ]" :style="{ borderLeftColor: priorityColor }" role="button" tabindex="0"
-                :aria-label="`Card: ${cardData?.title}, Status: ${cardData?.status}, Priority: ${cardData?.priorityId}`">
-                <div class="flex flex-row space-x-2">
-                    <div class="drag-handle flex items-center justify-between mb-1">
-                        <GripVertical class="w-4 h-4 text-gray-400 cursor-grab" />
-                        <div class="flex items-center gap-1">
-                            <AlertCircle v-if="cardData?.priorityId! > 2" class="w-4 h-4 text-red-500" />
-                            <Calendar v-if="cardData?.dueDate" class="w-4 h-4 text-blue-500" />
-                        </div>
-                    </div>
-                    <h3 class="font-medium text-sm mb-1">{{ cardData?.title }}</h3>
-                </div>
-                <div v-show="cardData?.assigneeId" class="flex items-center justify-between text-xs text-gray-500">
+    <div class="flex flex-col w-full">
+        <div :class="[
+            'flex flex-col gap-2 mt-1 w-full h-fit rounded bg-white border border-gray-400/80 px-2 py-1.5 shadow hover:bg-gray-300/80 hover:cursor-pointer transition-all duration-200',
+            statusColor,
+            { 'opacity-50 cursor-not-allowed': cardData?.status === 'done' },
+            { 'shadow-xl scale-105': isDragging }
+        ]" :style="{ borderLeftColor: priorityColor }" role="button" tabindex="0"
+            :aria-label="`Card: ${cardData?.title}, Status: ${cardData?.status}, Priority: ${cardData?.priorityId}`">
+            <div class="flex flex-row space-x-2">
+                <div class="drag-handle flex items-center justify-between mb-1">
+                    <GripVertical class="w-4 h-4 text-gray-400 cursor-grab" />
                     <div class="flex items-center gap-1">
-                        <User class="w-3 h-3" />
-                        <span v-if="cardData?.assigneeId">Assigned</span>
-                        <span v-else>Unassigned</span>
+                        <AlertCircle v-if="cardData?.priorityId! > 2" class="w-4 h-4 text-red-500" />
+                        <Calendar v-if="cardData?.dueDate" class="w-4 h-4 text-blue-500" />
                     </div>
-                    <div v-if="cardData?.dueDate" class="text-xs">
-                        {{ new Date(cardData.dueDate).toLocaleDateString() }}
-                    </div>
+                </div>
+                <DialogRoot class="flex-1">
+                    <DialogTrigger class="w-full text-left" :disabled="isDragging">
+                        <h3 class="font-medium text-sm mb-1">{{ cardData?.title }}</h3>
+                    </DialogTrigger>
+                    <KanbanCardModal :card-data="cardData" />
+                </DialogRoot>
+            </div>
+            <div v-show="cardData?.assigneeId" class="flex items-center justify-between text-xs text-gray-500">
+                <div class="flex items-center gap-1">
+                    <User class="w-3 h-3" />
+                    <span v-if="cardData?.assigneeId">Assigned</span>
+                    <span v-else>Unassigned</span>
+                </div>
+                <div v-if="cardData?.dueDate" class="text-xs">
+                    {{ new Date(cardData.dueDate).toLocaleDateString() }}
                 </div>
             </div>
-        </DialogTrigger>
-        <KanbanCardModal :card-data="cardData" />
-    </DialogRoot>
+        </div>
+    </div>
 </template>

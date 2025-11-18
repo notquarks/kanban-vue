@@ -86,7 +86,6 @@ export const kanbanCardsTable = sqliteTable("kanban_cards", {
   description: text("description"),
   columnId: text("column_id").notNull().references(() => kanbanColumnsTable.id, { onDelete: 'cascade' }),
   order: int("order").notNull().default(0),
-  assigneeId: text("assignee_id").references(() => usersTable.id, { onDelete: 'set null' }),
   reporterId: text("reporter_id").notNull().references(() => usersTable.id),
   priorityId: int("priority_id").notNull().references(() => prioritiesTable.id),
   dueDate: int("due_date", { mode: "timestamp" }),
@@ -103,6 +102,25 @@ export const cardsToLabelsTable = sqliteTable("cards_to_labels", {
 }, (table) => ({
   pk: primaryKey({ columns: [table.cardId, table.labelId] }),
 }));
+
+export const cardsToMembersTable = sqliteTable("cards_to_members", {
+  cardId: text("card_id").notNull().references(() => kanbanCardsTable.id, { onDelete: 'cascade' }),
+  userId: text("user_id").notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.cardId, table.userId] }),
+}));
+
+
+export const cardTodosTable = sqliteTable("card_todos", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  cardId: text("card_id").notNull().references(() => kanbanCardsTable.id, { onDelete: 'cascade' }),
+  title: text("title").notNull(),
+  isCompleted: int("is_completed", { mode: "boolean" }).notNull().default(false),
+  order: int("order").notNull().default(0),
+  createdAt: int("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: int("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 
 export const attachmentsTable = sqliteTable("attachments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

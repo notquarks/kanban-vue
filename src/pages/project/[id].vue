@@ -31,7 +31,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import draggable from 'vuedraggable';
 
-const route = useRoute();
+const route = useRoute('/project/[id]')
 
 definePage({
     meta: {
@@ -40,7 +40,7 @@ definePage({
     }
 })
 
-const projectId = route.query.id as string;
+const projectId = route.params.id as string;
 const kanbanStore = useKanbanStore();
 const boards = ref<KanbanBoard[]>([]);
 const createBoardName = ref('');

@@ -14,6 +14,7 @@ declare module 'vue' {
     KanbanCard: typeof import('./src/components/kanban/Kanban-Card.vue')['default']
     KanbanCardModal: typeof import('./src/components/kanban/Kanban-Card-Modal.vue')['default']
     KanbanList: typeof import('./src/components/kanban/Kanban-List.vue')['default']
+    KanbanTodo: typeof import('./src/components/kanban/Kanban-Todo.vue')['default']
     ModalNewProject: typeof import('./src/components/Modal-NewProject.vue')['default']
     ModalProject: typeof import('./src/components/project/Modal-Project.vue')['default']
     NavBar: typeof import('./src/components/NavBar.vue')['default']

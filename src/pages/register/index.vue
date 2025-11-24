@@ -17,7 +17,7 @@ const passwordVisible = ref(false);
 
 definePage({
   meta: {
-    requiresAuth: true,
+    requiresAuth: false,
     title: 'Register'
   }
 })
@@ -62,7 +62,7 @@ function register() {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center">
+  <div class="flex min-h-screen items-center justify-center w-full">
     <div class="flex w-full max-w-sm flex-col gap-1 rounded-md border p-4">
       <h1 class="py-2 text-xl font-bold">Register</h1>
       <div class="flex w-full flex-col gap-y-2">
@@ -105,7 +105,7 @@ function register() {
         </p>
       </div>
       <button @click="register"
-        class="hover:bg-surface transition-color w-full rounded-md bg-(--color-ui-strong) px-2 py-1 text-(--color-text-on-accent) duration-150 ease-in hover:cursor-pointer hover:border hover:text-black disabled:opacity-50">
+        class="hover:bg-surface transition-color w-full rounded-md bg-(--color-ui-strong) px-2 py-1 text-white duration-150 ease-in hover:cursor-pointer hover:border hover:text-black disabled:opacity-50">
         Register
       </button>
     </div>

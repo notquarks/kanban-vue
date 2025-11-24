@@ -1,6 +1,17 @@
-import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
-import { api } from '../utils/api'
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import { api } from "../utils/api";
+import router from "@/router";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  isAdmin: boolean;
+  status: string;
+  createdAt: string;
+  lastLoginAt?: string;
+}
 
 export const useAuthStore = defineStore("auth", () => {
   const storedToken =
@@ -8,16 +19,16 @@ export const useAuthStore = defineStore("auth", () => {
   const storedUser =
     typeof window !== "undefined" ? localStorage.getItem("user") : null;
 
-  let parsedUser = null;
+  let parsedUser: User | null = null;
   if (storedUser) {
     try {
       parsedUser = JSON.parse(storedUser);
-    } catch (error) {
+    } catch {
       localStorage.removeItem("user");
     }
   }
 
-  const user = ref(parsedUser);
+  const user = ref<User | null>(parsedUser);
   const token = ref<string | null>(storedToken);
   const isAuthenticated = ref(!!storedToken && !!parsedUser);
 
@@ -72,24 +83,31 @@ export const useAuthStore = defineStore("auth", () => {
   async function logout() {
     try {
       if (token.value) {
-        try {
-          await api.post("/auth/logout", {});
-        } catch (error) {
-          throw error instanceof Error ? error : new Error("Logout failed");
-        }
+        await api.post("/auth/logout", {});
       }
     } catch (error) {
-      throw error instanceof Error ? error : new Error("Logout failed");
+      console.error("Server logout failed:", error);
+    } finally {
+      clearAuth();
+      await router.push("/login");
     }
+  }
+
+  function clearAuth() {
+    token.value = null;
+    user.value = null;
+    isAuthenticated.value = false;
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   }
 
   async function checkAuth(): Promise<boolean> {
     if (!token.value) {
+      clearAuth();
       return false;
     }
 
     try {
-      // Verify token with server
       const response = await api.get("/auth/me");
 
       if (response.user) {
@@ -99,18 +117,13 @@ export const useAuthStore = defineStore("auth", () => {
         return true;
       }
     } catch (error) {
-      console.error("Auth check failed:", error);
+      clearAuth();
+      return false;
     }
 
-    // If we reach here, auth is invalid
-    token.value = null;
-    user.value = null;
-    isAuthenticated.value = false;
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuth();
     return false;
   }
-
 
   return {
     user,

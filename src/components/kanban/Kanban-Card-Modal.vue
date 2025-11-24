@@ -15,8 +15,11 @@ import {
     X,
 } from "lucide-vue-next";
 import {
+    AvatarFallback,
+    AvatarRoot,
     DialogClose,
     DialogContent,
+    DialogDescription,
     DialogOverlay,
     DialogPortal,
     DialogTitle,
@@ -40,8 +43,8 @@ const attachments = ref<Attachment[]>([]);
 const labels = ref<Label[]>([]);
 const members = ref<any[]>([]);
 const newTodoTitle = ref("");
-const newAttachment = ref<File | null>(null);
-const openInputTask = ref(false)
+const openInputTask = ref(false);
+const isDescriptionFocused = ref(false);
 
 
 const progressValue = computed(() => {
@@ -49,7 +52,6 @@ const progressValue = computed(() => {
         return 0;
     }
     const completedCount = todos.value.filter(t => t.isCompleted).length;
-    console.log('Progress: ', (completedCount / todos.value.length) * 100)
     return (completedCount / todos.value.length) * 100;
 });
 
@@ -110,7 +112,7 @@ const saveData = async () => {
         });
         const cardUpdateData: Partial<CreateCardData> = {
             title: props.cardData.title,
-            description: props.cardData.description || undefined,
+            description: editableDescription.value || undefined,
             columnId: props.cardData.columnId,
             order: props.cardData.order,
             assigneeId: props.cardData.assigneeId || undefined,
@@ -139,6 +141,7 @@ const handleTodoUpdate = async (updatedTodo: { id: string; title: string; isComp
                     createdAt: existingTodo.createdAt,
                     updatedAt: existingTodo.updatedAt
                 };
+                console.log(todos.value[index]);
             }
         }
         await kanbanStore.updateCardTodo(updatedTodo.id, {
@@ -175,7 +178,7 @@ const handleDeleteTodo = async (id: string) => {
                 <LayoutList />
                 <input type="text" name="title-input" id="title-input"
                     class="w-[60%] bg-gray-200/60 px-2 py-0.5 focus:border-b focus:outline-gray-400/50"
-                    v-model="editableTitle" />
+                    v-model="editableTitle" tabindex="-1" />
             </DialogTitle>
             <div class="grid grid-cols-[65%_35%]">
                 <!-- Col 1  -->
@@ -198,11 +201,16 @@ const handleDeleteTodo = async (id: string) => {
                             <TextInitial />
                             <p class="text-lg font-medium">Description</p>
                         </div>
-                        <div class="flex w-full pl-10">
+                        <DialogDescription class="flex w-full pl-10 flex-col items-start">
                             <textarea name=" desc-input" id="desc-input" v-model="editableDescription"
                                 class="h-24 w-full rounded-sm border-none bg-gray-200/60 p-2 focus:border focus:border-gray-600/40 focus:outline-gray-600/40"
-                                placeholder="Add Description"></textarea>
-                        </div>
+                                @focus="isDescriptionFocused = true" placeholder="Add Description" tabindex="-1" />
+                            <button v-show="isDescriptionFocused" type="button"
+                                @click="() => { saveData(); isDescriptionFocused = false; }"
+                                class="mt-2 px-3 py-1 rounded-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors">
+                                Save
+                            </button>
+                        </DialogDescription>
                     </div>
                     <div class="flex w-full flex-col gap-2">
                         <div class="flex flex-row items-center gap-3">
@@ -264,14 +272,6 @@ const handleDeleteTodo = async (id: string) => {
                         </button>
                     </div>
                 </div>
-            </div>
-            <div class="mt-[25px] flex justify-end">
-                <DialogClose as-child>
-                    <button @click="saveData"
-                        class="inline-flex h-[35px] items-center justify-center rounded-sm bg-black px-[15px] text-sm leading-none font-semibold text-white hover:bg-gray-800/80 focus:shadow-[0_0_0_2px] focus:shadow-black focus:outline-none">
-                        Save changes
-                    </button>
-                </DialogClose>
             </div>
             <DialogClose
                 class="absolute top-[10px] right-[10px] inline-flex h-[25px] w-[25px] appearance-none items-center justify-center rounded-full text-black hover:cursor-pointer hover:bg-gray-800/70 hover:text-white focus:shadow-[0_0_0_2px] focus:shadow-black focus:outline-none"

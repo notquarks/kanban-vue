@@ -536,13 +536,73 @@ export const useKanbanStore = defineStore("kanban", () => {
 
   const fetchLabels = async (): Promise<Label[]> => {
     try {
-      const data = await api.get("/labels");
+      const response = await api.get("/labels");
+      const data = response.labels || response;
       labels.value = data;
       return data;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Unable to fetch labels";
       throw err;
+    }
+  };
+
+  const createLabel = async (name: string, color: string): Promise<Label> => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const response = await api.post("/labels", { name, color });
+      const newLabel = response.label || response;
+      labels.value.push(newLabel);
+      return newLabel;
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Unable to create label";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const updateLabel = async (
+    id: string,
+    name: string,
+    color: string,
+  ): Promise<Label> => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const response = await api.put(`/labels/${id}`, { name, color });
+      const updatedLabel = response.label || response;
+      const index = labels.value.findIndex((l: Label) => l.id === id);
+      if (index !== -1) {
+        labels.value[index] = updatedLabel;
+      }
+      return updatedLabel;
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Unable to update label";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const deleteLabel = async (id: string): Promise<void> => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      await api.delete(`/labels/${id}`);
+      labels.value = labels.value.filter((l: Label) => l.id !== id);
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Unable to delete label";
+      throw err;
+    } finally {
+      loading.value = false;
     }
   };
 
@@ -796,6 +856,9 @@ export const useKanbanStore = defineStore("kanban", () => {
     // Reference data
     fetchPriorities,
     fetchLabels,
+    createLabel,
+    updateLabel,
+    deleteLabel,
 
     // Helper functions
     getBoardById,

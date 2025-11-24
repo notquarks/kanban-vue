@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import KanbanList from "@/components/kanban/Kanban-List.vue";
-import { useKanbanStore, type CreateBoardData, type KanbanBoard, type KanbanColumn } from "@/stores/kanban";
+import { useKanbanStore, type CreateBoardData, type KanbanBoard, type KanbanColumn, type Label } from "@/stores/kanban";
 import { Plus, X } from "lucide-vue-next";
 import {
     AlertDialogAction,
@@ -30,6 +30,7 @@ import {
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import draggable from 'vuedraggable';
+import { Edit2, Trash2 } from "lucide-vue-next";
 
 const route = useRoute('/project/[id]')
 
@@ -50,6 +51,12 @@ const activeTab = ref('add-tab');
 const inputColumn = ref<boolean>(false);
 const columnInput = ref<string>('');
 const isDraggingColumn = ref<boolean>(false);
+const labels = ref<Label[]>([]);
+const newLabelName = ref('');
+const newLabelColor = ref('#3B82F6');
+const editingLabelId = ref<string | null>(null);
+const editingLabelName = ref('');
+const editingLabelColor = ref('');
 
 const getColumnsForBoard = (boardId: string) => {
     if (!kanbanStore.columns || !Array.isArray(kanbanStore.columns)) {
@@ -198,6 +205,64 @@ const handleCardMoved = async (event: {
         return;
     }
 };
+
+const loadLabels = async () => {
+    try {
+        labels.value = await kanbanStore.fetchLabels();
+    } catch (error) {
+        console.error('Failed to load labels:', error);
+    }
+};
+
+const createLabel = async () => {
+    if (!newLabelName.value.trim()) return;
+
+    try {
+        await kanbanStore.createLabel(newLabelName.value, newLabelColor.value);
+        await loadLabels();
+        newLabelName.value = '';
+        newLabelColor.value = '#3B82F6';
+    } catch (error) {
+        console.error('Failed to create label:', error);
+    }
+};
+
+const startEditLabel = (label: Label) => {
+    editingLabelId.value = label.id;
+    editingLabelName.value = label.name;
+    editingLabelColor.value = label.color;
+};
+
+const saveLabel = async () => {
+    if (!editingLabelId.value || !editingLabelName.value.trim()) return;
+
+    try {
+        await kanbanStore.updateLabel(
+            editingLabelId.value,
+            editingLabelName.value,
+            editingLabelColor.value
+        );
+        await loadLabels();
+        cancelEditLabel();
+    } catch (error) {
+        console.error('Failed to update label:', error);
+    }
+};
+
+const cancelEditLabel = () => {
+    editingLabelId.value = null;
+    editingLabelName.value = '';
+    editingLabelColor.value = '';
+};
+
+const deleteLabel = async (labelId: string) => {
+    try {
+        await kanbanStore.deleteLabel(labelId);
+        await loadLabels();
+    } catch (error) {
+        console.error('Failed to delete label:', error);
+    }
+};
 </script>
 
 <template>
@@ -303,7 +368,94 @@ const handleCardMoved = async (event: {
                 :value="`tab${index}`" force-mount :hidden="activeTab !== `tab${index}`">
                 <div class="flex flex-col space-y-4 pt-6 px-4 h-full min-h-0 overflow-hidden">
                     <div class="flex flex-row space-x-4 items-center w-full">
-                        <button class="underline hover:cursor-pointer">Labels</button>
+                        <DialogRoot @update:open="(open) => { if (open) loadLabels(); }">
+                            <DialogTrigger class="underline hover:cursor-pointer">
+                                Labels
+                            </DialogTrigger>
+                            <DialogPortal>
+                                <DialogOverlay
+                                    class="bg-gray-700/80 data-[state=open]:animate-overlayShow fixed inset-0 z-30" />
+                                <DialogContent
+                                    class="data-[state=open]:animate-contentShow fixed top-[50%] left-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] rounded-[6px] bg-white p-[25px] shadow-[hsl(206_22%_7%_/_35%)_0px_10px_38px_-10px,_hsl(206_22%_7%_/_20%)_0px_10px_20px_-15px] focus:outline-none z-[100]">
+                                    <DialogTitle class="text-lg font-semibold mb-2">
+                                        Labels Management
+                                    </DialogTitle>
+                                    <DialogDescription class="flex flex-col gap-4 text-gray-600">
+                                        <p class="text-sm">Create and manage labels for your project cards</p>
+                                        <div class="border-t pt-4">
+                                            <h3 class="text-sm font-medium text-black mb-3">Create New Label</h3>
+                                            <div class="flex flex-col gap-2">
+                                                <div class="flex gap-2">
+                                                    <input type="color" v-model="newLabelColor"
+                                                        class="h-10 w-12 rounded border border-gray-300 cursor-pointer"
+                                                        title="Choose label color" />
+                                                    <input type="text" v-model="newLabelName" placeholder="Label name"
+                                                        @keyup.enter="createLabel" class="basic-input w-full"
+                                                        tabindex="-1" />
+                                                    <button @click="createLabel"
+                                                        class="px-4 py-2 bg-black text-white rounded hover:bg-gray-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                                        :disabled="!newLabelName.trim()">
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="border-t pt-4">
+                                            <h3 class="text-sm font-medium text-black mb-3">Existing Labels</h3>
+                                            <div v-if="labels.length === 0" class="text-center py-8 text-gray-400">
+                                                <p>No labels yet. Create one above!</p>
+                                            </div>
+                                            <div v-else class="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+                                                <div v-for="label in labels" :key="label.id"
+                                                    class="flex items-center gap-2 px-1 py-2 rounded hover:bg-gray-50 transition-colors group">
+                                                    <template v-if="editingLabelId === label.id">
+                                                        <input type="color" v-model="editingLabelColor"
+                                                            class="h-8 w-10 rounded border border-gray-300 cursor-pointer" />
+                                                        <input type="text" v-model="editingLabelName"
+                                                            @keyup.enter="saveLabel" @keyup.esc="cancelEditLabel"
+                                                            class="flex-1 px-2 py-1 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                                                            tabindex="-1" />
+                                                        <button @click="saveLabel"
+                                                            class="px-3 py-1 bg-gray-800 text-white rounded text-sm hover:bg-gray-700">
+                                                            Save
+                                                        </button>
+                                                        <button @click="cancelEditLabel"
+                                                            class="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400">
+                                                            Cancel
+                                                        </button>
+                                                    </template>
+                                                    <template v-else>
+                                                        <div class="w-8 h-8 rounded flex-shrink-0"
+                                                            :style="{ backgroundColor: label.color }"></div>
+                                                        <span class="flex-1 text-black font-medium">
+                                                            {{ label.name }}</span>
+                                                        <div
+                                                            class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                                            <button @click="startEditLabel(label)"
+                                                                class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                                title="Edit label">
+                                                                <Edit2 :size="16" />
+                                                            </button>
+                                                            <button @click="deleteLabel(label.id)"
+                                                                class="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                                title="Delete label">
+                                                                <Trash2 :size="16" />
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </DialogDescription>
+                                    <DialogClose
+                                        class="absolute top-[10px] right-[10px] inline-flex h-[25px] w-[25px] appearance-none items-center justify-center rounded-full text-black hover:cursor-pointer hover:bg-gray-200 focus:shadow-[0_0_0_2px] focus:shadow-black focus:outline-none"
+                                        aria-label="Close">
+                                        <X class="m-1" />
+                                    </DialogClose>
+                                </DialogContent>
+                            </DialogPortal>
+                        </DialogRoot>
                     </div>
                     <div class="flex-1 overflow-x-auto overflow-y-hidden py-4 min-h-0">
                         <div class="flex flex-row space-x-4 h-full">

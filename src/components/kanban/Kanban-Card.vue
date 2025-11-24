@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useKanbanStore, type KanbanCard } from "@/stores/kanban";
-import { AlertCircle, Calendar, GripVertical, User } from "lucide-vue-next";
+import { AlertCircle, Calendar, GripVertical } from "lucide-vue-next";
 import {
     DialogRoot,
     DialogTrigger
@@ -38,7 +38,7 @@ const statusColor = computed(() => {
 async function fetchCardDataLocal(cardId: string) {
     try {
         isLoading.value = true;
-        const response = await kanbanStore.getCardById(props.kanbanCardId);
+        const response = await kanbanStore.getCardById(cardId);
         cardData.value = response
     } catch (error) {
         console.error('Failed to fetch cards:', error);
@@ -47,9 +47,7 @@ async function fetchCardDataLocal(cardId: string) {
     }
 }
 
-
 onMounted(async () => {
-    console.log(props.kanbanCardId)
     if (props.kanbanCardId != "") {
         await fetchCardDataLocal(props.kanbanCardId);
     }
@@ -81,14 +79,12 @@ onMounted(async () => {
                     <KanbanCardModal :card-data="cardData" />
                 </DialogRoot>
             </div>
-            <div v-show="cardData?.assigneeId" class="flex items-center justify-between text-xs text-gray-500">
-                <div class="flex items-center gap-1">
-                    <User class="w-3 h-3" />
-                    <span v-if="cardData?.assigneeId">Assigned</span>
+            <div v-show="cardData?.members?.length" class="flex items-center justify-between text-xs text-gray-500">
+                <div class="flex items-center gap-1 text-xs">
+                    <span v-if="cardData?.dueDate">
+                        Due {{ new Date(cardData.dueDate).toLocaleDateString() }}
+                    </span>
                     <span v-else>Unassigned</span>
-                </div>
-                <div v-if="cardData?.dueDate" class="text-xs">
-                    {{ new Date(cardData.dueDate).toLocaleDateString() }}
                 </div>
             </div>
         </div>

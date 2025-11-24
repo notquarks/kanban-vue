@@ -590,6 +590,182 @@ cardsRoutes.patch(
   },
 );
 
+// Update card
+cardsRoutes.put(
+  "/:id",
+  requireAuth(),
+  validator("json", (value: unknown, c) => {
+    const body = value as UpdateCardRequest;
+
+    if (body.title !== undefined && !body.title.trim()) {
+      return c.json({ error: "Title cannot be empty" } as ErrorResponse, 400);
+    }
+
+    if (body.title && body.title.length > 200) {
+      return c.json(
+        { error: "Title must be less than 200 characters" } as ErrorResponse,
+        400,
+      );
+    }
+
+    if (body.description && body.description.length > 2000) {
+      return c.json(
+        {
+          error: "Description must be less than 2000 characters",
+        } as ErrorResponse,
+        400,
+      );
+    }
+
+    return body;
+  }),
+  async (c) => {
+    try {
+      const id = c.req.param("id");
+      const updateData = c.req.valid("json") as UpdateCardRequest;
+      const currentUser = c.get("user");
+
+      const [existingCard] = await db
+        .select()
+        .from(kanbanCardsTable)
+        .where(eq(kanbanCardsTable.id, id))
+        .limit(1);
+
+      if (!existingCard) {
+        throw new AuthException("Card not found", 404);
+      }
+
+      const isMember = await db
+        .select()
+        .from(cardsToMembersTable)
+        .where(
+          and(
+            eq(cardsToMembersTable.cardId, id),
+            eq(cardsToMembersTable.userId, currentUser.id),
+          ),
+        )
+        .limit(1);
+
+      if (
+        !currentUser.isAdmin &&
+        existingCard.reporterId !== currentUser.id &&
+        isMember.length === 0
+      ) {
+        throw new AuthException(
+          "Forbidden: You can only update cards you created or are a member of",
+          403,
+        );
+      }
+
+      const dbUpdateData: DatabaseUpdateCardRequest = {};
+
+      if (updateData.title !== undefined) {
+        dbUpdateData.title = updateData.title.trim();
+      }
+
+      if (updateData.description !== undefined) {
+        dbUpdateData.description = updateData.description?.trim() || null;
+      }
+
+      if (updateData.columnId !== undefined) {
+        const [column] = await db
+          .select()
+          .from(kanbanColumnsTable)
+          .where(eq(kanbanColumnsTable.id, updateData.columnId))
+          .limit(1);
+        if (!column) {
+          throw new AuthException("Column not found", 404);
+        }
+        dbUpdateData.columnId = updateData.columnId;
+      }
+
+      if (updateData.priorityId !== undefined) {
+        dbUpdateData.priorityId = updateData.priorityId;
+      }
+
+      if (updateData.dueDate !== undefined) {
+        if (updateData.dueDate) {
+          const parsedDueDate = new Date(updateData.dueDate);
+          if (Number.isNaN(parsedDueDate.getTime())) {
+            throw new AuthException("Invalid due date format", 400);
+          }
+          dbUpdateData.dueDate = parsedDueDate;
+        } else {
+          dbUpdateData.dueDate = null;
+        }
+      }
+
+      if (updateData.order !== undefined) {
+        dbUpdateData.order = updateData.order;
+      }
+
+      if (updateData.status !== undefined) {
+        dbUpdateData.status = updateData.status;
+      }
+
+      if (updateData.estimatedHours !== undefined) {
+        dbUpdateData.estimatedHours = updateData.estimatedHours;
+      }
+
+      if (updateData.actualHours !== undefined) {
+        dbUpdateData.actualHours = updateData.actualHours;
+      }
+
+      // Update card
+      const [updatedCard] = await db
+        .update(kanbanCardsTable)
+        .set(dbUpdateData)
+        .where(eq(kanbanCardsTable.id, id))
+        .returning();
+
+      // Get all members for this card
+      const members = await db
+        .select({
+          id: usersTable.id,
+          name: usersTable.name,
+          email: usersTable.email,
+          avatar: usersTable.avatar,
+          status: usersTable.status,
+          isAdmin: usersTable.isAdmin,
+          createdAt: usersTable.createdAt,
+        })
+        .from(cardsToMembersTable)
+        .leftJoin(usersTable, eq(cardsToMembersTable.userId, usersTable.id))
+        .where(eq(cardsToMembersTable.cardId, id));
+
+      const safeMembers = members.map((member) =>
+        createSafeUser({
+          id: member.id as string,
+          name: member.name as string,
+          email: member.email as string,
+          passwordHash: "",
+          avatar: member.avatar as string | null,
+          status: member.status as string,
+          isAdmin: member.isAdmin as boolean,
+          createdAt: member.createdAt as Date,
+          updatedAt: member.createdAt as Date,
+          lastLoginAt: null,
+          emailVerifiedAt: null,
+        }),
+      );
+
+      const safeCard = {
+        ...updatedCard,
+        members: safeMembers,
+      };
+
+      return c.json(safeCard);
+    } catch (error) {
+      if (error instanceof AuthException) {
+        throw error;
+      }
+
+      console.error("Update card error:", error);
+      throw new AuthException("Failed to update card", 500);
+    }
+  },
+);
+
 // Delete card
 cardsRoutes.delete("/:id", requireAuth(), async (c) => {
   try {

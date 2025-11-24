@@ -44,7 +44,6 @@ router.beforeEach(async (to, from, next) => {
 				console.error("Auth check failed in router guard:", error);
 			}
 		} else if (!storedToken) {
-			console.log("Router guard: No token found, redirecting to login");
 		}
 		next({ name: "/login/", query: { redirect: to.fullPath } });
 		return;

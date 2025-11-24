@@ -9,9 +9,11 @@ import { ArrowLeft, Kanban } from "lucide-vue-next";
 import { useRoute, RouterLink } from "vue-router";
 import { computed, onMounted, watch } from "vue";
 import { type Project, useProjectsStore } from "@/stores/projects";
+import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute('/project/[id]');
 const projectStore = useProjectsStore();
+const authStore = useAuthStore();
 
 const isProjectPage = computed(() => route.path.startsWith('/project/'));
 
@@ -25,13 +27,16 @@ const projectId = computed(() => route.params.id as string | undefined);
 
 const project = computed<Project | undefined>(() => {
   if (isProjectPage.value && projectId.value) {
-    const selectedProject = projectStore.getProjectById(projectId.value as string);
-    return selectedProject;
+    return projectStore.projects.find(p => p.id === projectId.value);
   }
   return undefined;
 });
 
 async function ensureProjectsLoaded() {
+  if (!authStore.token) {
+    return;
+  }
+
   if (projectStore.projects.length === 0) {
     await projectStore.fetchProjects().catch(error => {
       console.error("Failed to fetch projects:", error);
@@ -43,9 +48,9 @@ onMounted(async () => {
   await ensureProjectsLoaded();
 });
 
-watch([() => route.path, () => projectId.value], async () => {
+watch([() => route.path, () => projectId.value, () => authStore.token], async () => {
   await ensureProjectsLoaded();
-}, { immediate: true });
+});
 </script>
 
 <template>

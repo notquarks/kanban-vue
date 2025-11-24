@@ -35,13 +35,11 @@ const cardsInColumn = ref<KanbanCard[]>([]);
 const isDragging = ref(false);
 
 const onDragStart = () => {
-    console.log('Drag started');
     isDragging.value = true;
     document.body.classList.add('dragging');
 };
 
 const onDragEnd = () => {
-    console.log('Drag ended');
     isDragging.value = false;
     document.body.classList.remove('dragging');
 };
@@ -232,7 +230,7 @@ watch(() => kanbanStore.getCardsByColumnId(props.listId), (newCards) => {
                 class="task-list flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 min-h-0" @start="onDragStart"
                 @end="onDragEnd" @change="onChange" item-key="id" tag="div" handle=".drag-handle">
                 <template #item="{ element: card }">
-                    <KanbanCardComp :kanbanCardId="card.id" :is-dragging="isDragging" />
+                    <KanbanCardComp :kanbanCardId="card.id" :project-id="props.projectId" :is-dragging="isDragging" />
                 </template>
 
             </draggable>

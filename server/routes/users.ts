@@ -1,10 +1,10 @@
 // server/routes/users.ts
-import { Hono } from 'hono';
-import { HTTPException } from 'hono/http-exception';
-import { validator } from 'hono/validator';
-import { eq, and, ne, like } from 'drizzle-orm';
-import { db } from '../index';
-import { usersTable } from '../db/schema';
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { validator } from "hono/validator";
+import { eq, and, ne, like } from "drizzle-orm";
+import { db } from "../index";
+import { usersTable } from "../db/schema";
 import {
   type AuthVariables,
   type SafeUser,
@@ -12,8 +12,9 @@ import {
   requireAuth,
   requireAdmin,
   hashPassword,
-  AuthException
-} from '../middleware/auth';
+  jwtMiddleware,
+  AuthException,
+} from "../middleware/auth";
 
 // Type definitions for request bodies
 interface CreateUserRequest {
@@ -56,37 +57,45 @@ export const usersRoutes = new Hono<{ Variables: AuthVariables }>();
 
 // Public registration endpoint (alternative to auth/register)
 usersRoutes.post(
-  '/',
-  validator('json', (value, c) => {
+  "/",
+  validator("json", (value, c) => {
     const body = value as CreateUserRequest;
 
     // Validate required fields
     if (!body.name?.trim()) {
-      return c.json({ error: 'Name is required' } as ErrorResponse, 400);
+      return c.json({ error: "Name is required" } as ErrorResponse, 400);
     }
 
     if (!body.email?.trim()) {
-      return c.json({ error: 'Email is required' } as ErrorResponse, 400);
+      return c.json({ error: "Email is required" } as ErrorResponse, 400);
     }
 
     if (!body.password?.trim()) {
-      return c.json({ error: 'Password is required' } as ErrorResponse, 400);
+      return c.json({ error: "Password is required" } as ErrorResponse, 400);
     }
 
     // Validate name length
     if (body.name.length < 2 || body.name.length > 50) {
-      return c.json({ error: 'Name must be between 2 and 50 characters' } as ErrorResponse, 400);
+      return c.json(
+        { error: "Name must be between 2 and 50 characters" } as ErrorResponse,
+        400,
+      );
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(body.email)) {
-      return c.json({ error: 'Invalid email format' } as ErrorResponse, 400);
+      return c.json({ error: "Invalid email format" } as ErrorResponse, 400);
     }
 
     // Password validation
     if (body.password.length < 8) {
-      return c.json({ error: 'Password must be at least 8 characters long' } as ErrorResponse, 400);
+      return c.json(
+        {
+          error: "Password must be at least 8 characters long",
+        } as ErrorResponse,
+        400,
+      );
     }
 
     // Only allow admin creation if explicitly allowed
@@ -98,7 +107,12 @@ usersRoutes.post(
   }),
   async (c) => {
     try {
-      const { name, email, password, isAdmin = false } = c.req.valid('json') as CreateUserRequest;
+      const {
+        name,
+        email,
+        password,
+        isAdmin = false,
+      } = c.req.valid("json") as CreateUserRequest;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -108,7 +122,7 @@ usersRoutes.post(
         .limit(1);
 
       if (existingUser) {
-        throw new AuthException('User with this email already exists', 409);
+        throw new AuthException("User with this email already exists", 409);
       }
 
       // Hash password
@@ -122,7 +136,7 @@ usersRoutes.post(
           email: email.toLowerCase().trim(),
           passwordHash,
           isAdmin,
-          status: 'active',
+          status: "active",
         })
         .returning();
 
@@ -139,138 +153,144 @@ usersRoutes.post(
         throw error;
       }
 
-      console.error('User creation error:', error);
-      throw new AuthException('Failed to create user', 500);
+      console.error("User creation error:", error);
+      throw new AuthException("Failed to create user", 500);
     }
-  }
+  },
 );
 
 // Get all users (authenticated users only)
-usersRoutes.get(
-  '/',
-  requireAuth(),
-  async (c) => {
-    try {
-      const currentUser = c.get('user');
-      const isAdmin = currentUser.isAdmin;
+usersRoutes.get("/", jwtMiddleware(), requireAuth(), async (c) => {
+  try {
+    const currentUser = c.get("user");
+    const isAdmin = currentUser.isAdmin;
 
-      let users: typeof usersTable.$inferSelect[];
+    let users: (typeof usersTable.$inferSelect)[];
 
-      if (isAdmin) {
-        // Admins can see all users
-        users = await db.select().from(usersTable);
-      } else {
-        // Regular users can see only active users
-        users = await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.status, 'active'));
-      }
-
-      // Create safe users response
-      const safeUsers = users.map(createSafeUser);
-
-      const response: UsersResponse = {
-        users: safeUsers,
-      };
-
-      return c.json(response);
-    } catch (error) {
-      console.error('Get users error:', error);
-      throw new AuthException('Failed to fetch users', 500);
-    }
-  }
-);
-
-// Get user by ID (authenticated users only)
-usersRoutes.get(
-  '/:id',
-  requireAuth(),
-  async (c) => {
-    try {
-      const id = c.req.param('id');
-      const currentUser = c.get('user');
-
-      // Users can only get their own profile unless they're admin
-      if (currentUser.id !== id && !currentUser.isAdmin) {
-        throw new AuthException('Forbidden: You can only access your own profile', 403);
-      }
-
-      const [user] = await db
+    if (isAdmin) {
+      users = await db.select().from(usersTable);
+    } else {
+      users = await db
         .select()
         .from(usersTable)
-        .where(eq(usersTable.id, id))
-        .limit(1);
-
-      if (!user) {
-        throw new AuthException('User not found', 404);
-      }
-
-      // Create safe user response
-      const safeUser = createSafeUser(user);
-
-      const response: UserResponse = {
-        user: safeUser,
-      };
-
-      return c.json(response);
-    } catch (error) {
-      if (error instanceof AuthException) {
-        throw error;
-      }
-
-      console.error('Get user error:', error);
-      throw new AuthException('Failed to fetch user', 500);
+        .where(eq(usersTable.status, "active"));
     }
+
+    const safeUsers = users.map(createSafeUser);
+
+    const response: UsersResponse = {
+      users: safeUsers,
+    };
+
+    return c.json(response);
+  } catch (error) {
+    console.error("Get users error:", error);
+    throw new AuthException("Failed to fetch users", 500);
   }
-);
+});
+
+// Get user by ID (authenticated users only)
+usersRoutes.get("/:id", jwtMiddleware(), requireAuth(), async (c) => {
+  try {
+    const id = c.req.param("id");
+    const currentUser = c.get("user");
+
+    // Users can only get their own profile unless they're admin
+    if (currentUser.id !== id && !currentUser.isAdmin) {
+      throw new AuthException(
+        "Forbidden: You can only access your own profile",
+        403,
+      );
+    }
+
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, id))
+      .limit(1);
+
+    if (!user) {
+      throw new AuthException("User not found", 404);
+    }
+
+    // Create safe user response
+    const safeUser = createSafeUser(user);
+
+    const response: UserResponse = {
+      user: safeUser,
+    };
+
+    return c.json(response);
+  } catch (error) {
+    if (error instanceof AuthException) {
+      throw error;
+    }
+
+    console.error("Get user error:", error);
+    throw new AuthException("Failed to fetch user", 500);
+  }
+});
 
 // Update user (authenticated users only)
 usersRoutes.put(
-  '/:id',
+  "/:id",
+  jwtMiddleware(),
   requireAuth(),
-  validator('json', (value, c) => {
+  validator("json", (value, c) => {
     const body = value as UpdateUserRequest;
 
     // Validate name if provided
     if (body.name !== undefined) {
       if (!body.name?.trim()) {
-        return c.json({ error: 'Name cannot be empty' } as ErrorResponse, 400);
+        return c.json({ error: "Name cannot be empty" } as ErrorResponse, 400);
       }
 
       if (body.name.length < 2 || body.name.length > 50) {
-        return c.json({ error: 'Name must be between 2 and 50 characters' } as ErrorResponse, 400);
+        return c.json(
+          {
+            error: "Name must be between 2 and 50 characters",
+          } as ErrorResponse,
+          400,
+        );
       }
     }
 
     // Validate email if provided
     if (body.email !== undefined) {
       if (!body.email?.trim()) {
-        return c.json({ error: 'Email cannot be empty' } as ErrorResponse, 400);
+        return c.json({ error: "Email cannot be empty" } as ErrorResponse, 400);
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(body.email)) {
-        return c.json({ error: 'Invalid email format' } as ErrorResponse, 400);
+        return c.json({ error: "Invalid email format" } as ErrorResponse, 400);
       }
     }
 
     // Validate password if provided
     if (body.password !== undefined) {
       if (!body.password?.trim()) {
-        return c.json({ error: 'Password cannot be empty' } as ErrorResponse, 400);
+        return c.json(
+          { error: "Password cannot be empty" } as ErrorResponse,
+          400,
+        );
       }
 
       if (body.password.length < 8) {
-        return c.json({ error: 'Password must be at least 8 characters long' } as ErrorResponse, 400);
+        return c.json(
+          {
+            error: "Password must be at least 8 characters long",
+          } as ErrorResponse,
+          400,
+        );
       }
     }
 
     // Validate status if provided
     if (body.status !== undefined) {
-      const validStatuses = ['active', 'inactive', 'suspended'];
+      const validStatuses = ["active", "inactive", "suspended"];
       if (!validStatuses.includes(body.status)) {
-        return c.json({ error: 'Invalid status' } as ErrorResponse, 400);
+        return c.json({ error: "Invalid status" } as ErrorResponse, 400);
       }
     }
 
@@ -278,13 +298,16 @@ usersRoutes.put(
   }),
   async (c) => {
     try {
-      const id = c.req.param('id');
-      const updateData = c.req.valid('json') as UpdateUserRequest;
-      const currentUser = c.get('user');
+      const id = c.req.param("id");
+      const updateData = c.req.valid("json") as UpdateUserRequest;
+      const currentUser = c.get("user");
 
       // Users can only update their own profile unless they're admin
       if (currentUser.id !== id && !currentUser.isAdmin) {
-        throw new AuthException('Forbidden: You can only update your own profile', 403);
+        throw new AuthException(
+          "Forbidden: You can only update your own profile",
+          403,
+        );
       }
 
       // Regular users cannot change admin status or status
@@ -301,7 +324,7 @@ usersRoutes.put(
         .limit(1);
 
       if (!existingUser) {
-        throw new AuthException('User not found', 404);
+        throw new AuthException("User not found", 404);
       }
 
       // Check email uniqueness if email is being changed
@@ -309,14 +332,16 @@ usersRoutes.put(
         const [emailCheck] = await db
           .select()
           .from(usersTable)
-          .where(and(
-            eq(usersTable.email, updateData.email.toLowerCase()),
-            ne(usersTable.id, id)
-          ))
+          .where(
+            and(
+              eq(usersTable.email, updateData.email.toLowerCase()),
+              ne(usersTable.id, id),
+            ),
+          )
           .limit(1);
 
         if (emailCheck) {
-          throw new AuthException('Email already exists', 409);
+          throw new AuthException("Email already exists", 409);
         }
 
         updateData.email = updateData.email.toLowerCase().trim();
@@ -354,25 +379,26 @@ usersRoutes.put(
         throw error;
       }
 
-      console.error('Update user error:', error);
-      throw new AuthException('Failed to update user', 500);
+      console.error("Update user error:", error);
+      throw new AuthException("Failed to update user", 500);
     }
-  }
+  },
 );
 
 // Delete user (admin only)
 usersRoutes.delete(
-  '/:id',
+  "/:id",
+  jwtMiddleware(),
   requireAuth(),
   requireAdmin(),
   async (c) => {
     try {
-      const id = c.req.param('id');
-      const currentUser = c.get('user');
+      const id = c.req.param("id");
+      const currentUser = c.get("user");
 
       // Prevent self-deletion
       if (currentUser.id === id) {
-        throw new AuthException('Cannot delete your own account', 403);
+        throw new AuthException("Cannot delete your own account", 403);
       }
 
       // Check if user exists
@@ -383,14 +409,14 @@ usersRoutes.delete(
         .limit(1);
 
       if (!user) {
-        throw new AuthException('User not found', 404);
+        throw new AuthException("User not found", 404);
       }
 
       // Delete user
       await db.delete(usersTable).where(eq(usersTable.id, id));
 
       const response: MessageResponse = {
-        message: 'User deleted successfully',
+        message: "User deleted successfully",
         success: true,
       };
 
@@ -400,50 +426,47 @@ usersRoutes.delete(
         throw error;
       }
 
-      console.error('Delete user error:', error);
-      throw new AuthException('Failed to delete user', 500);
+      console.error("Delete user error:", error);
+      throw new AuthException("Failed to delete user", 500);
     }
-  }
+  },
 );
 
 // Search users (authenticated users only)
-usersRoutes.get(
-  '/search/:query',
-  requireAuth(),
-  async (c) => {
-    try {
-      const query = c.req.param('query');
+usersRoutes.get("/search/:query", jwtMiddleware(), requireAuth(), async (c) => {
+  try {
+    const query = c.req.param("query");
 
+    if (!query?.trim()) {
+      throw new AuthException("Search query is required", 400);
+    }
 
-      if (!query?.trim()) {
-        throw new AuthException('Search query is required', 400);
-      }
-
-      // Simple search implementation - in production, you might want full-text search
-      const users = await db
-        .select()
-        .from(usersTable)
-        .where(and(
-          eq(usersTable.status, 'active'),
+    // Simple search implementation - in production, you might want full-text search
+    const users = await db
+      .select()
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.status, "active"),
           // This is a simplified search - in production, use proper search operators
           // For SQLite, you might use LIKE operator
-          like(usersTable.name, `%${query}%`)
-        ))
-        .limit(20); // Limit results
+          like(usersTable.name, `%${query}%`),
+        ),
+      )
+      .limit(20); // Limit results
 
-      const safeUsers = users.map(createSafeUser);
+    const safeUsers = users.map(createSafeUser);
 
-      return c.json({ users: safeUsers, query, count: safeUsers.length });
-    } catch (error) {
-      if (error instanceof AuthException) {
-        throw error;
-      }
-
-      console.error('Search users error:', error);
-      throw new AuthException('Failed to search users', 500);
+    return c.json({ users: safeUsers, query, count: safeUsers.length });
+  } catch (error) {
+    if (error instanceof AuthException) {
+      throw error;
     }
+
+    console.error("Search users error:", error);
+    throw new AuthException("Failed to search users", 500);
   }
-);
+});
 
 // Global error handler for users routes
 usersRoutes.onError((err, c) => {
@@ -455,6 +478,6 @@ usersRoutes.onError((err, c) => {
     return c.json({ error: err.message }, err.status);
   }
 
-  console.error('Unhandled users error:', err);
-  return c.json({ error: 'Internal server error' }, 500);
+  console.error("Unhandled users error:", err);
+  return c.json({ error: "Internal server error" }, 500);
 });

@@ -36,7 +36,8 @@ export const useTeamsStore = defineStore("teams", () => {
       teams.value = data;
       return data;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Unable to fetch teams";
+      error.value =
+        err instanceof Error ? err.message : "Unable to fetch teams";
       throw err;
     } finally {
       loading.value = false;
@@ -52,14 +53,18 @@ export const useTeamsStore = defineStore("teams", () => {
       teams.value.push(data);
       return data;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Unable to create team";
+      error.value =
+        err instanceof Error ? err.message : "Unable to create team";
       throw err;
     } finally {
       loading.value = false;
     }
   };
 
-  const updateTeam = async (id: string, teamData: UpdateTeamData): Promise<Team> => {
+  const updateTeam = async (
+    id: string,
+    teamData: UpdateTeamData,
+  ): Promise<Team> => {
     loading.value = true;
     error.value = null;
 
@@ -71,7 +76,8 @@ export const useTeamsStore = defineStore("teams", () => {
       }
       return data;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Unable to update team";
+      error.value =
+        err instanceof Error ? err.message : "Unable to update team";
       throw err;
     } finally {
       loading.value = false;
@@ -86,7 +92,8 @@ export const useTeamsStore = defineStore("teams", () => {
       await api.delete(`/teams/${id}`);
       teams.value = teams.value.filter((t: Team) => t.id !== id);
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Unable to delete team";
+      error.value =
+        err instanceof Error ? err.message : "Unable to delete team";
       throw err;
     } finally {
       loading.value = false;
@@ -100,15 +107,64 @@ export const useTeamsStore = defineStore("teams", () => {
 
   const searchTeams = (query: string): Team[] => {
     const lowerQuery = query.toLowerCase();
-    return teams.value.filter((t: Team) =>
-      t.name.toLowerCase().includes(lowerQuery) ||
-      (t.description?.toLowerCase().includes(lowerQuery) ?? false)
+    return teams.value.filter(
+      (t: Team) =>
+        t.name.toLowerCase().includes(lowerQuery) ||
+        (t.description?.toLowerCase().includes(lowerQuery) ?? false),
     );
   };
 
   // Utility function to clear the teams array
   const clearTeams = (): void => {
     teams.value = [];
+  };
+
+  const fetchAllUsers = async (): Promise<any[]> => {
+    try {
+      const response = await api.get("/users");
+      return response.users || [];
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Unable to fetch users";
+      return [];
+    }
+  };
+
+  const addUserToTeam = async (
+    teamId: string,
+    userId: string,
+  ): Promise<any> => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const data = await api.post(`/teams/${teamId}/users/${userId}`, {});
+      return data;
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Unable to add user to team";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const removeUserFromTeam = async (
+    teamId: string,
+    userId: string,
+  ): Promise<void> => {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      await api.delete(`/teams/${teamId}/users/${userId}`);
+    } catch (err) {
+      error.value =
+        err instanceof Error ? err.message : "Unable to remove user from team";
+      throw err;
+    } finally {
+      loading.value = false;
+    }
   };
 
   return {
@@ -122,5 +178,8 @@ export const useTeamsStore = defineStore("teams", () => {
     getTeamById,
     searchTeams,
     clearTeams,
+    fetchAllUsers,
+    addUserToTeam,
+    removeUserFromTeam,
   };
 });

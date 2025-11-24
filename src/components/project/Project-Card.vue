@@ -24,7 +24,6 @@ import ModalNewProject from "./Modal-Project.vue";
 
 const router = useRouter();
 const projectStore = useProjectsStore();
-const authStore = useAuthStore();
 const toggleState = ref(false);
 const errorMessage = ref<string | Error | null>(null);
 

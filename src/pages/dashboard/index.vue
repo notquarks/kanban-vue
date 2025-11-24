@@ -17,12 +17,11 @@ definePage({
 })
 
 onMounted(async () => {
-  if (authStore.isAuthenticated) {
+  if (authStore.token) {
     await projectStore
       .fetchProjects()
       .catch((_error) => { })
       .finally(() => {
-        console.log(projectStore.projects);
       });
   }
 });

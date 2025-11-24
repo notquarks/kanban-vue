@@ -10,6 +10,7 @@ import KanbanCardModal from "./Kanban-Card-Modal.vue";
 
 const props = defineProps<{
     kanbanCardId: string;
+    projectId: string;
     isDragging?: boolean;
 }>();
 
@@ -47,6 +48,15 @@ async function fetchCardDataLocal(cardId: string) {
     }
 }
 
+const getInitials = (name: string): string => {
+    return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+};
+
 onMounted(async () => {
     if (props.kanbanCardId != "") {
         await fetchCardDataLocal(props.kanbanCardId);
@@ -76,15 +86,27 @@ onMounted(async () => {
                     <DialogTrigger class="w-full text-left" :disabled="isDragging">
                         <h3 class="font-medium text-sm mb-1">{{ cardData?.title }}</h3>
                     </DialogTrigger>
-                    <KanbanCardModal :card-data="cardData" />
+                    <KanbanCardModal :card-data="cardData" :project-id="props.projectId"
+                        @update:card="fetchCardDataLocal(props.kanbanCardId)" />
                 </DialogRoot>
             </div>
             <div v-show="cardData?.members?.length" class="flex items-center justify-between text-xs text-gray-500">
                 <div class="flex items-center gap-1 text-xs">
+                    <div class="flex flex-row w-full gap-1">
+                        <div v-for="member in cardData?.members" :key="member.id" class="relative group">
+                            <AvatarRoot
+                                class="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-gray-700 align-middle select-none">
+                                <AvatarFallback
+                                    class="flex h-full w-full items-center justify-center text-xs font-semibold text-white"
+                                    :delay-ms="600" :title="member.name">
+                                    {{ getInitials(member.name) }}
+                                </AvatarFallback>
+                            </AvatarRoot>
+                        </div>
+                    </div>
                     <span v-if="cardData?.dueDate">
                         Due {{ new Date(cardData.dueDate).toLocaleDateString() }}
                     </span>
-                    <span v-else>Unassigned</span>
                 </div>
             </div>
         </div>

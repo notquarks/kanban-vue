@@ -17,12 +17,11 @@ const projectStore = useProjectsStore();
 const authStore = useAuthStore();
 
 onMounted(async () => {
-    if (authStore.isAuthenticated) {
+    if (authStore.token) {
         projectStore
             .fetchProjects()
             .catch((_error) => { })
             .finally(() => {
-                console.log(projectStore.projects);
             });
     }
 });

@@ -1,4 +1,5 @@
 import router from "@/router";
+import { useAuthStore } from "@/stores/auth";
 
 const API_BASE_URL = "http://localhost:3001/api";
 
@@ -14,9 +15,17 @@ export async function apiRequest(
     ...((options.headers as Record<string, string>) || {}),
   };
 
-  const tokenToUse =
-    overrideToken ||
-    (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+  let tokenToUse = overrideToken;
+
+  if (!tokenToUse && typeof window !== "undefined") {
+    try {
+      const authStore = useAuthStore();
+      tokenToUse =
+        authStore.token || localStorage.getItem("token") || undefined;
+    } catch {
+      tokenToUse = localStorage.getItem("token") || undefined;
+    }
+  }
 
   if (tokenToUse) {
     headers.Authorization = `Bearer ${tokenToUse}`;

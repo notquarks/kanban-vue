@@ -30,7 +30,11 @@ import {
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import draggable from 'vuedraggable';
-import { Edit2, Trash2 } from "lucide-vue-next";
+import { Edit2, Trash2, UserPlus2, Users } from "lucide-vue-next";
+import { useTeamsStore } from "@/stores/teams";
+import { useProjectsStore } from "@/stores/projects";
+import { useAuthStore } from "@/stores/auth";
+import type { SafeUser } from "@/types";
 
 const route = useRoute('/project/[id]')
 
@@ -43,6 +47,9 @@ definePage({
 
 const projectId = route.params.id as string;
 const kanbanStore = useKanbanStore();
+const teamsStore = useTeamsStore();
+const projectsStore = useProjectsStore();
+const authStore = useAuthStore();
 const boards = ref<KanbanBoard[]>([]);
 const createBoardName = ref('');
 const isTemplate = ref(false);
@@ -57,6 +64,9 @@ const newLabelColor = ref('#3B82F6');
 const editingLabelId = ref<string | null>(null);
 const editingLabelName = ref('');
 const editingLabelColor = ref('');
+const allUsers = ref<SafeUser[]>([]);
+const teamMembers = ref<SafeUser[]>([]);
+const currentProject = ref<any>(null);
 
 const getColumnsForBoard = (boardId: string) => {
     if (!kanbanStore.columns || !Array.isArray(kanbanStore.columns)) {
@@ -76,31 +86,25 @@ const boardColumnsMap = computed(() => {
 });
 
 const onColumnDragStart = () => {
-    console.log('Column drag started');
     isDraggingColumn.value = true;
     document.body.classList.add('dragging-column');
 };
 
 const onColumnDragEnd = () => {
-    console.log('Column drag ended');
     isDraggingColumn.value = false;
     document.body.classList.remove('dragging-column');
 };
 
 const onColumnChange = async (event: any, boardId: string) => {
-    console.log('Column change event:', event);
 
     if (event.moved) {
         const column = event.moved.element;
         const newIndex = event.moved.newIndex;
         const oldIndex = event.moved.oldIndex;
-        console.log(`Moving column ${column.name} from ${oldIndex} to ${newIndex}`);
 
         try {
             await kanbanStore.reorderColumn(column.id, boardId, newIndex);
-            console.log('Column reordered successfully');
         } catch (error) {
-            console.error('Failed to reorder column:', error);
             await getColumns(boardId);
         }
     }
@@ -123,8 +127,21 @@ async function createBoard() {
 
     const createdBoard = await kanbanStore.createBoard(newBoard);
     if (createdBoard) {
+        if (isTemplate.value) {
+            const defaultColumns = ['To Do', 'In Progress', 'Done'];
+            for (const [i, name] of defaultColumns.entries()) {
+                await kanbanStore.createColumn({
+                    boardId: createdBoard.id,
+                    name: name,
+                    order: i
+                });
+            }
+            await getColumns(createdBoard.id);
+        }
+
         await getBoards(projectId);
         createBoardName.value = '';
+        isTemplate.value = false;
         activeTab.value = `tab${boards.value.length - 1}`;
     }
 }
@@ -196,12 +213,10 @@ const handleCardMoved = async (event: {
     newIndex: number;
     oldIndex: number;
 }) => {
-    console.log('Card moved:', event);
     const card = kanbanStore.getCardById(event.cardId);
     const targetColumn = kanbanStore.getColumnById(event.toColumnId);
 
     if (card?.status === 'done' && targetColumn?.name.toLowerCase() === 'todo') {
-        console.log('Cannot move completed cards back to To Do');
         return;
     }
 };
@@ -261,6 +276,75 @@ const deleteLabel = async (labelId: string) => {
         await loadLabels();
     } catch (error) {
         console.error('Failed to delete label:', error);
+    }
+};
+
+const loadProject = async () => {
+    if (!authStore.token) {
+        return;
+    }
+    try {
+        const project = await projectsStore.getProjectById(projectId);
+        currentProject.value = project;
+        if (project?.teamId) {
+            teamMembers.value = await projectsStore.fetchProjectTeamMembers(projectId);
+        }
+    } catch (error) {
+        console.error('Failed to load project:', error);
+    }
+};
+
+const loadAllUsers = async () => {
+    if (!authStore.token) {
+        return;
+    }
+    try {
+        allUsers.value = await teamsStore.fetchAllUsers();
+    } catch (error) {
+        console.error('Failed to load users:', error);
+    }
+};
+
+const availableUsers = computed(() => {
+    return allUsers.value.filter(
+        user => !teamMembers.value.some(member => member.id === user.id)
+    );
+});
+
+const addUserToProjectTeam = async (user: SafeUser) => {
+    if (!currentProject.value?.teamId) {
+        console.error('Project does not have a team');
+        return;
+    }
+
+    try {
+        await teamsStore.addUserToTeam(currentProject.value.teamId, user.id);
+        teamMembers.value.push(user);
+    } catch (error) {
+        console.error('Failed to add user to team:', error);
+    }
+};
+
+const getUserInitials = (name: string): string => {
+    return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+};
+
+const removeUserFromProjectTeam = async (userId: string) => {
+    if (!currentProject.value?.teamId) {
+        console.error('Project does not have a team');
+        return;
+    }
+
+    try {
+        await teamsStore.removeUserFromTeam(currentProject.value.teamId, userId);
+        teamMembers.value = teamMembers.value.filter(member => member.id !== userId);
+    } catch (error) {
+        console.error('Failed to remove user from team:', error);
     }
 };
 </script>
@@ -444,6 +528,84 @@ const deleteLabel = async (labelId: string) => {
                                                             </button>
                                                         </div>
                                                     </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </DialogDescription>
+                                    <DialogClose
+                                        class="absolute top-[10px] right-[10px] inline-flex h-[25px] w-[25px] appearance-none items-center justify-center rounded-full text-black hover:cursor-pointer hover:bg-gray-200 focus:shadow-[0_0_0_2px] focus:shadow-black focus:outline-none"
+                                        aria-label="Close">
+                                        <X class="m-1" />
+                                    </DialogClose>
+                                </DialogContent>
+                            </DialogPortal>
+                        </DialogRoot>
+                        <DialogRoot @update:open="(open) => { if (open) { loadProject(); loadAllUsers(); } }">
+                            <DialogTrigger class="underline hover:cursor-pointer">
+                                Team Members
+                            </DialogTrigger>
+                            <DialogPortal>
+                                <DialogOverlay
+                                    class="bg-gray-700/80 data-[state=open]:animate-overlayShow fixed inset-0 z-30" />
+                                <DialogContent
+                                    class="data-[state=open]:animate-contentShow fixed top-[50%] left-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] rounded-[6px] bg-white p-[25px] shadow-[hsl(206_22%_7%_/_35%)_0px_10px_38px_-10px,_hsl(206_22%_7%_/_20%)_0px_10px_20px_-15px] focus:outline-none z-[100]">
+                                    <DialogTitle class="text-lg font-semibold mb-2">
+                                        Team Members Management
+                                    </DialogTitle>
+                                    <DialogDescription class="flex flex-col gap-4 text-gray-600">
+                                        <p class="text-sm">Manage team members for this project</p>
+                                        <div class="border-t pt-4" v-if="currentProject?.teamId">
+                                            <h3 class="text-sm font-medium text-black mb-3">Add Team Member</h3>
+                                            <div class="flex flex-col gap-2 max-h-[200px] overflow-y-auto">
+                                                <div v-if="availableUsers.length === 0"
+                                                    class="text-center py-4 text-gray-400">
+                                                    <p>All users are already in the team</p>
+                                                </div>
+                                                <div v-for="user in availableUsers" :key="user.id"
+                                                    class="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 transition-colors text-left">
+                                                    <div
+                                                        class="h-8 w-8 rounded-full flex items-center justify-center text-white bg-gray-700 text-xs font-semibold flex-shrink-0">
+                                                        {{ getUserInitials(user.name) }}
+                                                    </div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="font-medium text-black truncate">{{ user.name }}</p>
+                                                        <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
+                                                    </div>
+                                                    <button type="button" @click="addUserToProjectTeam(user)"
+                                                        class="group hover:bg-gray-300 transition-colors duration-100 p-2 rounded-sm">
+                                                        <UserPlus2 :size="18"
+                                                            class="text-gray-400 flex-shrink-0 group-hover:text-gray-600" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="border-t pt-4">
+                                            <h3 class="text-sm font-medium text-black mb-3">Current Team Members</h3>
+                                            <div v-if="!currentProject?.teamId" class="text-center py-8 text-gray-400">
+                                                <Users :size="48" class="mx-auto mb-2 opacity-50" />
+                                                <p>This project doesn't have a team assigned</p>
+                                            </div>
+                                            <div v-else-if="teamMembers.length === 0"
+                                                class="text-center py-8 text-gray-400">
+                                                <p>No team members yet</p>
+                                            </div>
+                                            <div v-else class="flex flex-col gap-2 max-h-[250px] overflow-y-auto">
+                                                <div v-for="member in teamMembers" :key="member.id"
+                                                    class="group flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 transition-colors relative">
+                                                    <div
+                                                        class="h-8 w-8 bg-gray-700 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                                                        {{ getUserInitials(member.name) }}
+                                                    </div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="font-medium text-black truncate">{{ member.name }}</p>
+                                                        <p class="text-xs text-gray-500 truncate">{{ member.email }}</p>
+                                                    </div>
+                                                    <button @click="removeUserFromProjectTeam(member.id)"
+                                                        class="opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-opacity p-2 text-red-600 rounded flex-shrink-0"
+                                                        title="Remove from team">
+                                                        <Trash2 :size="16" />
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>

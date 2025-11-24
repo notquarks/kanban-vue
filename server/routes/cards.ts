@@ -1381,3 +1381,127 @@ cardsRoutes.delete("/attachments/:attachmentId", requireAuth(), async (c) => {
     throw new AuthException("Failed to delete attachment", 500);
   }
 });
+
+cardsRoutes.get("/:cardId/labels", requireAuth(), async (c) => {
+  try {
+    const cardId = c.req.param("cardId");
+
+    const [card] = await db
+      .select()
+      .from(kanbanCardsTable)
+      .where(eq(kanbanCardsTable.id, cardId))
+      .limit(1);
+
+    if (!card) {
+      throw new AuthException("Card not found", 404);
+    }
+
+    const labels = await db
+      .select({
+        id: labelsTable.id,
+        name: labelsTable.name,
+        color: labelsTable.color,
+        description: labelsTable.description,
+        createdAt: labelsTable.createdAt,
+        updatedAt: labelsTable.updatedAt,
+      })
+      .from(cardsToLabelsTable)
+      .leftJoin(labelsTable, eq(cardsToLabelsTable.labelId, labelsTable.id))
+      .where(eq(cardsToLabelsTable.cardId, cardId));
+
+    return c.json({ labels });
+  } catch (error) {
+    if (error instanceof AuthException) {
+      throw error;
+    }
+    console.error("Get card labels error:", error);
+    throw new AuthException("Failed to fetch card labels", 500);
+  }
+});
+
+cardsRoutes.post("/:cardId/labels/:labelId", requireAuth(), async (c) => {
+  try {
+    const cardId = c.req.param("cardId");
+    const labelId = c.req.param("labelId");
+
+    const [card] = await db
+      .select()
+      .from(kanbanCardsTable)
+      .where(eq(kanbanCardsTable.id, cardId))
+      .limit(1);
+
+    if (!card) {
+      throw new AuthException("Card not found", 404);
+    }
+
+    const [label] = await db
+      .select()
+      .from(labelsTable)
+      .where(eq(labelsTable.id, labelId))
+      .limit(1);
+
+    if (!label) {
+      throw new AuthException("Label not found", 404);
+    }
+
+    const [existing] = await db
+      .select()
+      .from(cardsToLabelsTable)
+      .where(
+        and(
+          eq(cardsToLabelsTable.cardId, cardId),
+          eq(cardsToLabelsTable.labelId, labelId),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      return c.json({ message: "Label already assigned to card" }, 200);
+    }
+
+    const [cardLabel] = await db
+      .insert(cardsToLabelsTable)
+      .values({
+        cardId,
+        labelId,
+      })
+      .returning();
+
+    return c.json({ cardLabel }, 201);
+  } catch (error) {
+    if (error instanceof AuthException) {
+      throw error;
+    }
+    console.error("Add card label error:", error);
+    throw new AuthException("Failed to add card label", 500);
+  }
+});
+
+cardsRoutes.delete("/:cardId/labels/:labelId", requireAuth(), async (c) => {
+  try {
+    const cardId = c.req.param("cardId");
+    const labelId = c.req.param("labelId");
+
+    await db
+      .delete(cardsToLabelsTable)
+      .where(
+        and(
+          eq(cardsToLabelsTable.cardId, cardId),
+          eq(cardsToLabelsTable.labelId, labelId),
+        ),
+      );
+
+    const response: MessageResponse = {
+      message: "Label removed from card successfully",
+      success: true,
+    };
+
+    return c.json(response);
+  } catch (error) {
+    if (error instanceof AuthException) {
+      throw error;
+    }
+    console.error("Remove card label error:", error);
+    throw new AuthException("Failed to remove card label", 500);
+  }
+});

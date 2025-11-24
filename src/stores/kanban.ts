@@ -165,7 +165,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.post("/boards", boardData);
+      const response = await api.post("/boards", boardData);
+      const data = response.board || response;
       boards.value.push(data);
       return data;
     } catch (err) {
@@ -185,7 +186,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.put(`/boards/${id}`, boardData);
+      const response = await api.put(`/boards/${id}`, boardData);
+      const data = response.board || response;
       const index = boards.value.findIndex((b: KanbanBoard) => b.id === id);
       if (index !== -1) {
         boards.value[index] = data;
@@ -251,7 +253,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.post("/columns", columnData);
+      const response = await api.post("/columns", columnData);
+      const data = response.column || response;
       columns.value.push(data);
       return data;
     } catch (err) {
@@ -271,7 +274,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.put(`/columns/${id}`, columnData);
+      const response = await api.put(`/columns/${id}`, columnData);
+      const data = response.column || response;
       const index = columns.value.findIndex((c: KanbanColumn) => c.id === id);
       if (index !== -1) {
         columns.value[index] = data;
@@ -373,7 +377,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.post("/cards", cardData);
+      const response = await api.post("/cards", cardData);
+      const data = response.card || response;
       cards.value.push(data);
       return data;
     } catch (err) {
@@ -393,7 +398,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.put(`/cards/${id}`, cardData);
+      const response = await api.put(`/cards/${id}`, cardData);
+      const data = response.card || response;
       const index = cards.value.findIndex((c: KanbanCard) => c.id === id);
       if (index !== -1) {
         cards.value[index] = data;
@@ -477,8 +483,11 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.post(`/cards/${cardId}/todos`, { title, order });
-      return data;
+      const response = await api.post(`/cards/${cardId}/todos`, {
+        title,
+        order,
+      });
+      return response.todo || response;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Unable to create card todo";
@@ -496,8 +505,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.put(`/cards/todos/${todoId}`, todoData);
-      return data;
+      const response = await api.put(`/cards/todos/${todoId}`, todoData);
+      return response.todo || response;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Unable to update card todo";
@@ -625,8 +634,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.post(`/cards/${cardId}/members/${userId}`, {});
-      return data;
+      const response = await api.post(`/cards/${cardId}/members/${userId}`, {});
+      return response.cardMember || response;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Unable to add card member";
@@ -676,8 +685,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.post(`/cards/${cardId}/attachments`, fileData);
-      return data;
+      const response = await api.post(`/cards/${cardId}/attachments`, fileData);
+      return response.attachment || response;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Unable to add card attachment";
@@ -721,8 +730,8 @@ export const useKanbanStore = defineStore("kanban", () => {
     error.value = null;
 
     try {
-      const data = await api.post(`/cards/${cardId}/labels/${labelId}`, {});
-      return data;
+      const response = await api.post(`/cards/${cardId}/labels/${labelId}`, {});
+      return response.cardLabel || response;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Unable to add card label";

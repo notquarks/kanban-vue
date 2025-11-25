@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useAuthStore } from "@/stores/auth";
 import { type Project, useProjectsStore } from "@/stores/projects";
 import { EllipsisVertical } from "lucide-vue-next";
 import {

@@ -12,7 +12,7 @@ import { teamsRoutes } from "./routes/teams";
 import { projectsRoutes } from "./routes/projects";
 import { boardsRoutes } from "./routes/boards";
 import { columnsRoutes } from "./routes/columns";
-import { cardsRoutes } from "./routes/cards";
+import { cardsRoutes } from "./routes/cards/index";
 import { prioritiesRoutes } from "./routes/priorities";
 import { labelsRoutes } from "./routes/labels";
 import {

@@ -15,6 +15,11 @@ export async function apiRequest(
     ...((options.headers as Record<string, string>) || {}),
   };
 
+  // If body is FormData, let the browser set the Content-Type header with the boundary
+  if (options.body instanceof FormData) {
+    delete headers["Content-Type"];
+  }
+
   let tokenToUse = overrideToken;
 
   if (!tokenToUse && typeof window !== "undefined") {
@@ -65,17 +70,17 @@ export const api = {
   post: (url: string, body: unknown) =>
     apiRequest(url, {
       method: "POST",
-      body: JSON.stringify(body),
+      body: body instanceof FormData ? body : JSON.stringify(body),
     }),
   put: (url: string, body: unknown) =>
     apiRequest(url, {
       method: "PUT",
-      body: JSON.stringify(body),
+      body: body instanceof FormData ? body : JSON.stringify(body),
     }),
   patch: (url: string, body: unknown) =>
     apiRequest(url, {
       method: "PATCH",
-      body: JSON.stringify(body),
+      body: body instanceof FormData ? body : JSON.stringify(body),
     }),
   delete: (url: string) => apiRequest(url, { method: "DELETE" }),
 };

@@ -696,12 +696,15 @@ export const useKanbanStore = defineStore("kanban", () => {
     }
   };
 
-  const deleteCardAttachment = async (attachmentId: string): Promise<void> => {
+  const deleteCardAttachment = async (
+    cardId: string,
+    attachmentId: string,
+  ): Promise<void> => {
     loading.value = true;
     error.value = null;
 
     try {
-      await api.delete(`/cards/attachments/${attachmentId}`);
+      await api.delete(`/cards/${cardId}/attachments/${attachmentId}`);
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Unable to delete card attachment";
